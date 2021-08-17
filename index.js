@@ -1,5 +1,4 @@
 const {Client, Intents, MessageEmbed} = require("discord.js");
-const config = require("./config.json");
 const client = new Client({ intents: ["GUILDS", "GUILD_MESSAGES", "DIRECT_MESSAGES"] });
 const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
@@ -17,18 +16,20 @@ const helpEmbed = new MessageEmbed()
 	.setColor('#0099ff')
 	.setTitle('Valid Commands')
 	.addFields(
-		{ name: 'pull', value: 'Replies with a random prompt from the database.', inline: true },
+		{ name: 'pull', value: 'Responds with a random prompt from the database.', inline: true },
 		{ name: 'push <prompt>', value: 'Adds *prompt* to the database and returns the new ID.', inline: true },
 		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
-		{ name: 'sean, daniel, finn, comfort', value: 'Responds with a random Tweet from the daily character accounts.', inline: true },
-		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true }
+		{ name: 'sean, daniel, finn, comfort, chris', value: 'Responds with a random Tweet from the daily character accounts.', inline: true },
+		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
+		{ name: 'height [tallest, shortest, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
+		{ name: 'guess <number>', value: 'See how close you get to a randomly generated number!', inline: true }
 		
 	);
 	
 const debugImg = new MessageEmbed()
 .setColor('#0099ff')
 	.setTitle('Image URL Test')
-	.setDescription('The image url value gets read as an object when it is not.')
+	.setDescription('Test Embed')
 	.setImage(new Object().url = 'https://pbs.twimg.com/media/E803PfgXsAMxnni.jpg');
 
 async function postPrompt(msg) {
@@ -40,7 +41,7 @@ async function postPrompt(msg) {
 	promptResult = res.insertId;
 	console.log(res);
   } catch (err) {
-	throw err;
+	myConsts.logger(err);
   } finally {
 	if (conn)
 		conn.end();
@@ -58,7 +59,7 @@ async function getPrompt() {
 	await conn.query("update prompts set dtUsed = now() where ID = ?", [row[0].ID]);
 
   } catch (err) {
-	throw err;
+	myConsts.logger(err);
   } finally {
 	if (conn)
 		conn.end();
@@ -66,7 +67,77 @@ async function getPrompt() {
   }
 }
 
-function InspiroBot(msg) {
+function NumberGame(g, guessCB) {
+	const seedOptions = {
+			hostname: 'api.random.org',
+			path: '/json-rpc/4/invoke',
+			method: 'POST',
+			headers: {
+			  'Content-Type': 'application/json',
+			  'User-Agent': myConsts.UA
+			}
+		  };
+		  
+	  var seedIn = {
+		  "jsonrpc": "2.0",
+		  "method": "generateIntegers",
+		  "params": {
+			  "apiKey": myConsts.RAND_ORG,
+			  "n": 3,
+			  "min": 0,
+			  "max": 2000000
+			  },
+			  "id": 1284
+		};
+		
+		try {
+			const seedReq = https.request(seedOptions, (res) => {
+			res.setEncoding('utf8');
+
+			res.on('data', (chunk) => {
+				var mySeed = 0;
+				//myConsts.logger("Random.org response: " + chunk);
+				let parsedSeed = JSON.parse(chunk);
+				if (!(typeof parsedSeed.result === "undefined")) {
+					mySeed = Math.round(Math.cbrt(parsedSeed.result.random.data[0] * parsedSeed.result.random.data[1] * parsedSeed.result.random.data[2]));
+					//myConsts.logger("Seed per Random.org (Geometric Mean of 3 elements): " + mySeed);
+				}
+				else {
+					mySeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+					console.log("Seed per Math.random(): " + mySeed);
+				}
+				 
+				 var userGuess = parseInt(g);
+				 var target = (mySeed % userGuess) + 1;
+				 //console.log(`Guess: ${userGuess}\r\nVal: ${mySeed}\r\nTarget: ${target}`);
+				 var diff = Math.abs(userGuess - target);
+				 var near = Math.ceil(target * .15);
+				 if (diff > 0 && diff <= near)
+					 return guessCB(`You were close! It was ${target}!`);
+				 else if (diff > near)
+					 return guessCB(`Better luck next time! It was ${target}!`);
+				 else
+					 return guessCB(`It *was* ${target}! Lucky!`);
+			  
+			});
+			});
+
+		  seedReq.on('error', (e) => {
+			myConsts.logger(`problem with request: ${e.message}`);
+		  });
+		  
+		  var postString = JSON.stringify(seedIn);
+		  // Write data to request body
+		  seedReq.write(postString);
+		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
+		  seedReq.end();
+		  
+		} catch (e) {
+		  myConsts.logger(e.message);
+		}
+}
+
+function InspiroBot(inspiroCB) {
 	const getOptions = {
 			hostname: 'inspirobot.me',
 			path: '/api?generate=true',
@@ -78,7 +149,7 @@ function InspiroBot(msg) {
 
 	//Perform GET request with specified options.
 	let imgData = '';
-	https.request(getOptions, (addr_res) => {
+	const inspiroReq = https.request(getOptions, (addr_res) => {
 		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
 			addr_res.on('end', () => {
 			
@@ -88,15 +159,84 @@ function InspiroBot(msg) {
 			myEmbed.image = myImage;
 			myEmbed.title = "InspiroBot says...";
 			myEmbed.color = Math.floor(Math.random() * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
-			
-			var embedString = JSON.stringify(myEmbed);
-			console.log(embedString);
-			msg.channel.send({embeds: [myEmbed]})
+			return inspiroCB(myEmbed);
+		});
+		addr_res.on('error', (err) => {
+			myConsts.logger(err);
 		});
 	}).end();
+	
+	inspiroReq.on('error', (err) => {
+		myConsts.logger(err);
+	});
 }
 
-function getTweet(msg, account) {
+function calcImperial(height) {
+	var inches = height / 2.54;
+	var feet = inches / 12;
+	var rem_inches = inches % 12;
+	return `${Math.trunc(feet)}'${Math.trunc(rem_inches)}"`;
+}
+
+async function processHeight(heightCB, uname = '', h = 0)
+{
+	let conn;
+	let promptOut;
+	var row;
+	try
+	{
+		conn = await pool.getConnection();
+		if (h < 1 && uname != '')
+		{
+			switch (uname.toLowerCase())
+			{
+				case 'shortest':
+				row = await conn.query('SELECT * from pl_height order by metric_height asc limit 1');
+				promptOut = `${row[0].name} is the shortest person on the server at ${row[0].metric_height} centimetres or ${calcImperial(row[0].metric_height)}.`;
+				break;
+				
+				case 'tallest':
+				row = await conn.query('SELECT * from pl_height order by metric_height desc limit 1');
+				promptOut = `${row[0].name} is the tallest person on the server at ${row[0].metric_height} centimetres or ${calcImperial(row[0].metric_height)}.`;
+				break;
+				
+				default:
+				row = await conn.query("SELECT * from pl_height where name = ?", [uname.toUpperCase()]);
+				promptOut = `${uname.toUpperCase()}'s height is ${row[0].metric_height} centimetres or ${calcImperial(row[0].metric_height)}.`;
+				break;
+			}
+		}
+		else if (h >= 1)
+		{
+			row = await conn.query("INSERT INTO pl_height (name, metric_height) VALUES (?, ?) ON DUPLICATE KEY UPDATE metric_height = VALUES(metric_height)", [uname.toUpperCase(), h]);
+			promptOut = `Height has been updated for ${uname.toUpperCase()}.`;
+		}
+		else if (uname == '')
+		{
+			var allHeights = new MessageEmbed()
+			.setTitle('Known server heights')
+			.setColor('#0099ff');
+			var rows = await conn.query('SELECT * from pl_height order by metric_height desc');
+			//console.log('Here ' + rows);
+			rows.forEach(async function(h) {
+				allHeights.addField(h.name, `${h.metric_height} cm; ${calcImperial(h.metric_height)}`, true);
+			});
+			promptOut = heightCB(allHeights);
+		}
+	}
+	catch (err)
+	{
+		myConsts.logger(err);
+	}
+	finally
+	{
+		if (conn)
+			conn.end();
+		return promptOut;
+	}	
+}
+
+function getTweet(account, tweetCB) {
 	var num = Math.random();
 	var myEmbed = new Object();
 	var birdData = new Object();
@@ -119,7 +259,12 @@ function getTweet(msg, account) {
 		{
 			"name": "Daily Daniel",
 			"id": '1417252091945435136'
+		},
+		{
+			"name": "Daily Chris",
+			"id": '1417256090715164675'
 		}
+	
 	];
 	var selectedAccount = null;
 	switch (account.toLowerCase())
@@ -132,6 +277,9 @@ function getTweet(msg, account) {
 		break;
 		case "daniel":
 		selectedAccount = accounts[3];
+		break;
+		case "chris":
+		selectedAccount = accounts[4];
 		break;
 		case "sean":
 		default:
@@ -152,7 +300,7 @@ function getTweet(msg, account) {
 	//Perform GET request with specified options.
 	let imgData = '';
 	//let account = accounts[Math.floor(num * accounts.length)];
-	https.request(getOptions, (addr_res) => {
+	const tweeetReq = https.request(getOptions, (addr_res) => {
 		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
 			addr_res.on('end', () => {
 			birdData = JSON.parse(imgData);
@@ -190,9 +338,16 @@ function getTweet(msg, account) {
 				myEmbed.url = selectedTweet.text;
 				myEmbed.description = 'A randomly selected Tweet.';
 			}
-			msg.channel.send({embeds: [myEmbed]});
+			return tweetCB(myEmbed);
+		});
+		addr_res.on('error', (err) => {
+			myConsts.logger(err);
 		});
 	}).end();
+	
+	tweeetReq.on('error', (err) => {
+		myConsts.logger(err);
+	});
 }
 
 const prefix = "!";
@@ -209,18 +364,19 @@ client.on("messageCreate", async function(message) {
 	  return;
   }
   const command = message.content.indexOf(' ') >= 0 ? message.content.slice(prefix.length, message.content.indexOf(' ')) : message.content.slice(prefix.length);
-  const arg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : "";
+  const baseArg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : null;
+  var args;
   //console.log(command + '\r\n' + arg);
   
   switch (command.toLowerCase())
   {
 	  case "push":
-	  var msgTxt = await postPrompt(arg);
-	  message.reply(`I added the prompt with ID ${msgTxt}.`);
+	  var msgTxt = await postPrompt(baseArg);
+	  message.channel.send(`I added the prompt with ID ${msgTxt}.`);
 	  break;
 	  
 	  case "pull":
-	  message.reply(await getPrompt());
+	  message.channel.send(await getPrompt());
 	  break;
 	  
 	  case "marco":
@@ -231,16 +387,47 @@ client.on("messageCreate", async function(message) {
 	  case 'daniel':
 	  case 'finn':
 	  case 'comfort':
-	  getTweet(message, command);
+	  case 'chris':
+	  getTweet(command, (resp) => {
+		message.channel.send({embeds: [resp]});  
+	  });
 	  break;
 	  
 	  case 'debug':
 	  message.channel.send({embeds: [debugImg]});
 	  break;
 	  
+	  case 'height':
+	  args = baseArg != null ? baseArg.split(' ') : [];
+	  if (args.length == 1)
+		  message.channel.send(await processHeight(null, baseArg));
+	  else if (args.length == 2) {
+		  //myConsts.logger((`Args length is 2\r\nFirst arg: ${args[0]}\r\nSecond arg: ${args[1]}`));
+		  message.channel.send(await processHeight(null, args[0], parseInt(args[1])));
+	  }
+	  else
+	  {
+		  processHeight((resp) => {
+			  message.channel.send({embeds: [resp]});
+		  });
+	  }
+	  break;
+	  
+	  case 'guess':
+	  args = baseArg != null ? baseArg.split(' ') : [];
+	  if (args.length == 1)
+	  {
+		  NumberGame(parseInt(args[0]), (resp) => {
+			  message.channel.send(resp);
+		  });
+	  }
+	  break;
+	  
 	  case 'inspiro':
 	  case 'inspirobot':
-	  InspiroBot(message);
+	  InspiroBot((resp) => {
+		message.channel.send({embeds: [resp]});	
+	  });
 	  break;
 	  
 	  default:
@@ -253,4 +440,4 @@ client.once('ready', () => {
 	console.log('Ready!');
 });
 
-client.login(config.BOT_TOKEN);
+client.login(myConsts.BOT_TOKEN);
