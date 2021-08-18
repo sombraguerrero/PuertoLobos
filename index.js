@@ -17,6 +17,7 @@ const helpEmbed = new MessageEmbed()
 	.setTitle('Valid Commands')
 	.addFields(
 		{ name: 'pull', value: 'Responds with a random prompt from the database.', inline: true },
+		{ name: '8ball', value: 'Answers binary questions.', inline: true },
 		{ name: 'push <prompt>', value: 'Adds *prompt* to the database and returns the new ID.', inline: true },
 		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
 		{ name: 'sean, daniel, finn, comfort, chris', value: 'Responds with a random Tweet from the daily character accounts.', inline: true },
@@ -49,12 +50,13 @@ async function postPrompt(msg) {
   }
 }
 
-async function getPrompt() {
+async function getPrompt(questions) {
   let conn;
   let promptOut;
+  var kind = questions == true ? 'answer' : 'writer';
   try {
 	conn = await pool.getConnection();
-	const row = await conn.query("SELECT * from prompts order by rand() limit 1");
+	const row = await conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', [kind]);
 	promptOut = row[0].prompt;
 	await conn.query("update prompts set dtUsed = now() where ID = ?", [row[0].ID]);
 
@@ -376,7 +378,11 @@ client.on("messageCreate", async function(message) {
 	  break;
 	  
 	  case "pull":
-	  message.channel.send(await getPrompt());
+	  message.channel.send(await getPrompt(false));
+	  break;
+	  
+	  case "8ball":
+	  message.reply(await getPrompt(true));
 	  break;
 	  
 	  case "marco":
