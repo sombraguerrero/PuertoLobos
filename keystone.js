@@ -1,40 +1,50 @@
 'use strict';
 const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
-const pool = mariadb.createPool({
-     host: myConsts.conn.host, 
-     user: myConsts.conn.user, 
-     password: myConsts.conn.password,
-	 port: myConsts.conn.port,
-	 database: myConsts.conn.database,
-     connectionLimit: myConsts.conn.connectionLimit
-});
-
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
+const FormData = require('form-data');
 const MersenneTwister = require('mersennetwister');
 
-async function getKeyResponse() {
+function getKeyResponse() {
 	 let conn;
-	 let promptOut;
+	 let promptOut = 'test';
 	 try
 	 {
-		 conn = await pool.getConnection();
-		 const row = await conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', ['key']);
-		 promptOut = row[0].prompt;
+		 mariadb.createConnection({
+			 host: myConsts.conn.host, 
+			 user: myConsts.conn.user, 
+			 password: myConsts.conn.password,
+			 port: myConsts.conn.port,
+			 database: myConsts.conn.database,
+			 connectionLimit: myConsts.conn.connectionLimit
+		 })
+		.then(conn => {
+			conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', ['key'])
+			.then(row => {
+				writeKeyEmbed(row[0].prompt);
+				conn.end();
+			})
+			.catch(err => {
+				myConsts.logger("data error: " + err);
+			});
+		})
+		.catch(err => {
+			myConsts.logger("not connected due to error: " + err);
+		});
 	 }
-	 catch (err)
-	{
-		 myConsts.logger(err);
-	}
-	
-	finally { conn.end(); } //NodeJS connector requires that both the connections and the pool be explicitly ended.
-	
+	 catch (ex)
+	 {
+		 myConsts.logger(ex);
+	 }
+	 
+}
+
+function writeKeyEmbed(str) {
 	var keyStone = new Object();
-	keyStone.content = myConsts.GREG + ' ' + promptOut;
+	keyStone.content = myConsts.GREG + ' ' + str;
 	var postString = JSON.stringify(keyStone);
-	try {
 		  const discordOptions = {
 			hostname: 'discord.com',
 			path: `/api/webhooks/${myConsts.PL_botspam}`,
@@ -67,12 +77,6 @@ async function getKeyResponse() {
 		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
 		  discordReq.end();
 		  console.log(postString);
-		}
-		catch (e) {
-		  console.error(e.message);
-		}
-		//NodeJS connector requires that both the connections and the pool be explicitly ended.
-		pool.end();
 }
 
 function NatalieDee(comicDate) {
@@ -1395,7 +1399,7 @@ switch (task % 19) {
 	
 	case 2:
 	//console.log('FORM RESPONSE!!!');
-	getKeyResponse(val);
+	getKeyResponse();
 	break;
 	
 	case 3:
