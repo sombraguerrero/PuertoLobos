@@ -1,18 +1,38 @@
 'use strict';
+const mariadb = require('mariadb');
+const myConsts = require('./myConstants.js');
+const pool = mariadb.createPool({
+     host: myConsts.conn.host, 
+     user: myConsts.conn.user, 
+     password: myConsts.conn.password,
+	 port: myConsts.conn.port,
+	 database: myConsts.conn.database,
+     connectionLimit: myConsts.conn.connectionLimit
+});
+
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
-const FormData = require('form-data');
 const MersenneTwister = require('mersennetwister');
-const myConsts = require('./myConstants.js');
 
-function getKeyResponse(num) {
-	fs.readFile('/var/services/web/webhooks/responses.csv', 'utf8', function(err, data) {
-		var output = data.split('|');
-		//console.log(output);
+async function getKeyResponse() {
+	 let conn;
+	 let promptOut;
+	 try
+	 {
+		 conn = await pool.getConnection();
+		 const row = await conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', ['key']);
+		 promptOut = row[0].prompt;
+	 }
+	 catch (err)
+	{
+		 myConsts.logger(err);
+	}
+	
+	finally { conn.end(); } //NodeJS connector requires that both the connections and the pool be explicitly ended.
 	
 	var keyStone = new Object();
-	keyStone.content = myConsts.GREG + ' ' + output[num % output.length];
+	keyStone.content = myConsts.GREG + ' ' + promptOut;
 	var postString = JSON.stringify(keyStone);
 	try {
 		  const discordOptions = {
@@ -51,7 +71,8 @@ function getKeyResponse(num) {
 		catch (e) {
 		  console.error(e.message);
 		}
-	});
+		//NodeJS connector requires that both the connections and the pool be explicitly ended.
+		pool.end();
 }
 
 function NatalieDee(comicDate) {

@@ -16,14 +16,15 @@ const helpEmbed = new MessageEmbed()
 	.setColor('#0099ff')
 	.setTitle('Valid Commands')
 	.addFields(
-		{ name: 'pull', value: 'Responds with a random prompt from the database.', inline: true },
+		{ name: 'pull <prompt, answer, key>', value: 'Pulls random writer\'s prompt, 8ball answer, or Great Silence response from database.', inline: true },
 		{ name: '8ball', value: 'Answers binary questions.', inline: true },
-		{ name: 'push <prompt>', value: 'Adds *prompt* to the database and returns the new ID.', inline: true },
+		{ name: 'push <prompt, answer, key>', value: 'Adds random writer\'s prompt, 8ball answer, or Great Silence response to database. Returns insert ID', inline: true },
 		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
 		{ name: 'sean, daniel, finn, comfort, chris', value: 'Responds with a random Tweet from the daily character accounts.', inline: true },
 		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
 		{ name: 'height [tallest, shortest, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
-		{ name: 'guess <number>', value: 'See how close you get to a randomly generated number!', inline: true }
+		{ name: 'guess <number>', value: 'See how close you get to a randomly generated number!', inline: true },
+		{ name: 'guid', value: 'DMs the sender a type 1 UUID.', inline: true }
 		
 	);
 	
@@ -33,12 +34,12 @@ const debugImg = new MessageEmbed()
 	.setDescription('Test Embed')
 	.setImage(new Object().url = 'https://pbs.twimg.com/media/E803PfgXsAMxnni.jpg');
 
-async function postPrompt(msg) {
+async function postPrompt(msg, kind) {
   let conn;
   var promptResult;
   try {
 	conn = await pool.getConnection();
-	const res = await conn.query("INSERT INTO prompts (prompt) values (?)", [msg]);
+	const res = await conn.query("INSERT INTO prompts (prompt, kind) values (?,?)", [msg, kind]);
 	promptResult = res.insertId;
 	console.log(res);
   } catch (err) {
@@ -50,15 +51,31 @@ async function postPrompt(msg) {
   }
 }
 
-async function getPrompt(questions) {
+async function getPrompt(kind) {
   let conn;
   let promptOut;
-  var kind = questions == true ? 'answer' : 'writer';
   try {
 	conn = await pool.getConnection();
 	const row = await conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', [kind]);
 	promptOut = row[0].prompt;
 	await conn.query("update prompts set dtUsed = now() where ID = ?", [row[0].ID]);
+
+  } catch (err) {
+	myConsts.logger(err);
+  } finally {
+	if (conn)
+		conn.end();
+	return promptOut;	
+  }
+}
+
+async function getGuid() {
+  let conn;
+  let promptOut;
+   try {
+	conn = await pool.getConnection();
+	const row = await conn.query("SELECT UUID() AS 'Guid'");
+	promptOut = row[0].Guid.toUpperCase();
 
   } catch (err) {
 	myConsts.logger(err);
@@ -352,7 +369,11 @@ function getTweet(account, tweetCB) {
 	});
 }
 
-const prefix = "!";
+const prefixes = ['!','?'];
+
+function validatePrefix(p) {
+	return prefixes.indexOf(p);
+}
 
 client.on("messageCreate", async function(message) {
   if (message.author.bot)
@@ -360,11 +381,14 @@ client.on("messageCreate", async function(message) {
 	  return;
   }
   
-  if (!message.content.startsWith(prefix))
+  var prefixFound = validatePrefix(message.content[0]);
+  //console.log('Prefix: ' + prefixes[prefixFound]);
+  if (prefixFound < 0 || !message.content.startsWith(prefixes[prefixFound]))
   {
 	  console.log("No prefix!");
 	  return;
   }
+  var prefix = prefixes[prefixFound];
   const command = message.content.indexOf(' ') >= 0 ? message.content.slice(prefix.length, message.content.indexOf(' ')) : message.content.slice(prefix.length);
   const baseArg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : null;
   var args;
@@ -373,12 +397,19 @@ client.on("messageCreate", async function(message) {
   switch (command.toLowerCase())
   {
 	  case "push":
-	  var msgTxt = await postPrompt(baseArg);
-	  message.channel.send(`I added the prompt with ID ${msgTxt}.`);
+	  arg2Start = baseArg != null ? baseArg.indexOf(' ') : null;
+	  arg1 = baseArg.slice(0, arg2Start)
+	  arg2 = baseArg.slice(arg2Start + 1);
+	  if (arg1.toLowerCase() == 'key' || arg1.toLowerCase() == 'prompt' || arg1.toLowerCase() == 'answer')
+	  {
+		  var msgTxt = await postPrompt(arg2, arg1.toLowerCase());
+		  message.channel.send(`I added the prompt with ID ${msgTxt}.`);
+	  }
 	  break;
 	  
 	  case "pull":
-	  message.channel.send(await getPrompt(false));
+	   if (baseArg.toLowerCase() == 'key' || baseArg.toLowerCase() == 'prompt' || baseArg.toLowerCase() == 'answer')
+		  message.channel.send(await getPrompt(baseArg.toLowerCase()));
 	  break;
 	  
 	  case "8ball":
@@ -400,7 +431,8 @@ client.on("messageCreate", async function(message) {
 	  break;
 	  
 	  case 'debug':
-	  message.channel.send({embeds: [debugImg]});
+	  //message.channel.send({embeds: [debugImg]});
+	  message.channel.send("<:doubt:878211423942082580>");
 	  break;
 	  
 	  case 'height':
@@ -436,8 +468,17 @@ client.on("messageCreate", async function(message) {
 	  });
 	  break;
 	  
-	  default:
+	  case 'help':
 	  message.channel.send({embeds: [helpEmbed]});
+	  break;
+	  
+	  case 'guid':
+	  message.author.send(await getGuid());
+	  break;
+	  
+	  default:
+	  return;
+	  //message.channel.send("It's for you guys, <@155149108183695360>, <@204255221017214977>!");
 	  break;
   }
 });
