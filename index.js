@@ -3,6 +3,7 @@ const client = new Client({ intents: ["GUILDS", "GUILD_MESSAGES", "DIRECT_MESSAG
 const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
 const https = require('https');
+const fs = require('fs');
 const pool = mariadb.createPool({
      host: myConsts.conn.host, 
      user: myConsts.conn.user, 
@@ -24,6 +25,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
 		{ name: 'height [tallest, shortest, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
 		{ name: 'guess <number>', value: 'See how close you get to a randomly generated number!', inline: true },
+		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
 		{ name: 'guid', value: 'DMs the sender a type 1 UUID.', inline: true }
 		
 	);
@@ -186,6 +188,43 @@ function InspiroBot(inspiroCB) {
 	}).end();
 	
 	inspiroReq.on('error', (err) => {
+		myConsts.logger(err);
+	});
+}
+
+function DadJokes(jokesCB) {
+	const getOptions = {
+			hostname: 'icanhazdadjoke.com',
+			path: `/search?limit=30&page=${Math.floor(Math.random() * 22)}`,
+			method: 'GET',
+			headers: {
+			  'User-Agent': myConsts.UA,
+			  'Accept': 'application/json'
+			}
+		  };
+
+	//Perform GET request with specified options.
+	let jokesData = '';
+	const jokesReq = https.request(getOptions, (jokeRes) => {
+		jokeRes.on('data', (jokes) => { jokesData += jokes; });
+			jokeRes.on('end', () => {
+			
+			var jokesParsed = JSON.parse(jokesData);
+			var jokesCollection = jokesParsed.results;
+			var jokesStr = 'Jokes on request:\r\n';
+			for (i = 0; i < 3; i++)
+			{
+				jokesStr += jokesCollection[Math.floor(Math.random() * jokesCollection.length)].joke + '\r\n';
+			}
+			//console.log("String content: " + jokesStr);
+			return jokesCB(jokesStr);
+		});
+		jokeRes.on('error', (err) => {
+			myConsts.logger(err);
+		});
+	}).end();
+	
+	jokesReq.on('error', (err) => {
 		myConsts.logger(err);
 	});
 }
@@ -375,112 +414,157 @@ function validatePrefix(p) {
 	return prefixes.indexOf(p);
 }
 
+function Goodnight(gnCB) {
+	var basePath = "D:\\run\\prompt-bot\\gn\\";
+	var num = Math.random();
+	fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
+		try {
+			const filteredFiles = files
+			.filter(dirent => dirent.isFile())
+			.map(dirent => dirent.name);
+			//filteredFiles.sort();
+			return gnCB(fs.createReadStream(basePath + filteredFiles[Math.floor(num * filteredFiles.length)]));
+		}
+		catch(err) {
+			myConsts.logger(err.name + ": " + err.message + "\r\n");
+		}
+	});
+}
+
 client.on("messageCreate", async function(message) {
-  if (message.author.bot)
-  {
-	  return;
-  }
-  
-  var prefixFound = validatePrefix(message.content[0]);
-  //console.log('Prefix: ' + prefixes[prefixFound]);
-  if (prefixFound < 0 || !message.content.startsWith(prefixes[prefixFound]))
-  {
-	  console.log("No prefix!");
-	  return;
-  }
-  var prefix = prefixes[prefixFound];
-  const command = message.content.indexOf(' ') >= 0 ? message.content.slice(prefix.length, message.content.indexOf(' ')) : message.content.slice(prefix.length);
-  const baseArg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : null;
-  var args;
-  //console.log(command + '\r\n' + arg);
-  
-  switch (command.toLowerCase())
-  {
-	  case "push":
-	  arg2Start = baseArg != null ? baseArg.indexOf(' ') : null;
-	  arg1 = baseArg.slice(0, arg2Start)
-	  arg2 = baseArg.slice(arg2Start + 1);
-	  if (arg1.toLowerCase() == 'key' || arg1.toLowerCase() == 'prompt' || arg1.toLowerCase() == 'answer')
+	try
+	{
+	  if (message.author.bot)
 	  {
-		  var msgTxt = await postPrompt(arg2, arg1.toLowerCase());
-		  message.channel.send(`I added the prompt with ID ${msgTxt}.`);
+		  return;
 	  }
-	  break;
 	  
-	  case "pull":
-	   if (baseArg.toLowerCase() == 'key' || baseArg.toLowerCase() == 'prompt' || baseArg.toLowerCase() == 'answer')
-		  message.channel.send(await getPrompt(baseArg.toLowerCase()));
-	  break;
-	  
-	  case "8ball":
-	  message.reply(await getPrompt(true));
-	  break;
-	  
-	  case "marco":
-	  message.channel.send("POLO!!");
-	  break;
-	  
-	  case 'sean':
-	  case 'daniel':
-	  case 'finn':
-	  case 'comfort':
-	  case 'chris':
-	  getTweet(command, (resp) => {
-		message.channel.send({embeds: [resp]});  
-	  });
-	  break;
-	  
-	  case 'debug':
-	  //message.channel.send({embeds: [debugImg]});
-	  message.channel.send("<:doubt:878211423942082580>");
-	  break;
-	  
-	  case 'height':
-	  args = baseArg != null ? baseArg.split(' ') : [];
-	  if (args.length == 1)
-		  message.channel.send(await processHeight(null, baseArg));
-	  else if (args.length == 2) {
-		  //myConsts.logger((`Args length is 2\r\nFirst arg: ${args[0]}\r\nSecond arg: ${args[1]}`));
-		  message.channel.send(await processHeight(null, args[0], parseInt(args[1])));
-	  }
-	  else
+	  else if (message.content.toLowerCase().startsWith('good morning') || message.content.toLowerCase().startsWith('morning'))
 	  {
-		  processHeight((resp) => {
-			  message.channel.send({embeds: [resp]});
+		  message.channel.send({files: [fs.createReadStream('D:\\run\\prompt-bot\\wakeup.gif')]});
+		  return;
+	  }
+	  
+	  else if (message.content.toLowerCase().startsWith('good night') || message.content.toLowerCase().startsWith('night') || message.content.toLowerCase().startsWith('g\'night'))
+	  {
+		  Goodnight((resp) => {
+			  message.channel.send({files: [resp]});
 		  });
+		  return;
 	  }
-	  break;
 	  
-	  case 'guess':
-	  args = baseArg != null ? baseArg.split(' ') : [];
-	  if (args.length == 1)
+	  var prefixFound = validatePrefix(message.content[0]);
+	  //console.log('Prefix: ' + prefixes[prefixFound]);
+	  if (prefixFound < 0 || !message.content.startsWith(prefixes[prefixFound]))
 	  {
-		  NumberGame(parseInt(args[0]), (resp) => {
-			  message.channel.send(resp);
-		  });
+		  console.log("No prefix!");
+		  return;
 	  }
-	  break;
 	  
-	  case 'inspiro':
-	  case 'inspirobot':
-	  InspiroBot((resp) => {
-		message.channel.send({embeds: [resp]});	
-	  });
-	  break;
+	  var prefix = prefixes[prefixFound];
+	  const command = message.content.indexOf(' ') >= 0 ? message.content.slice(prefix.length, message.content.indexOf(' ')) : message.content.slice(prefix.length);
+	  const baseArg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : null;
+	  var args;
+	  //console.log(command + '\r\n' + arg);
 	  
-	  case 'help':
-	  message.channel.send({embeds: [helpEmbed]});
-	  break;
-	  
-	  case 'guid':
-	  message.author.send(await getGuid());
-	  break;
-	  
-	  default:
-	  return;
-	  //message.channel.send("It's for you guys, <@155149108183695360>, <@204255221017214977>!");
-	  break;
-  }
+	  switch (command.toLowerCase())
+	  {
+		  case "push":
+		  arg2Start = baseArg != null ? baseArg.indexOf(' ') : null;
+		  arg1 = baseArg.slice(0, arg2Start)
+		  arg2 = baseArg.slice(arg2Start + 1);
+		  if (arg1.toLowerCase() == 'key' || arg1.toLowerCase() == 'prompt' || arg1.toLowerCase() == 'answer')
+		  {
+			  var msgTxt = await postPrompt(arg2, arg1.toLowerCase());
+			  message.channel.send(`I added the prompt with ID ${msgTxt}.`);
+		  }
+		  break;
+		  
+		  case "pull":
+		   if (baseArg.toLowerCase() == 'key' || baseArg.toLowerCase() == 'prompt' || baseArg.toLowerCase() == 'answer')
+			  message.channel.send(await getPrompt(baseArg.toLowerCase()));
+		  break;
+		  
+		  case "8ball":
+		  message.reply(await getPrompt(true));
+		  break;
+		  
+		  case "marco":
+		  message.channel.send("POLO!!");
+		  break;
+		  
+		  case 'sean':
+		  case 'daniel':
+		  case 'finn':
+		  case 'comfort':
+		  case 'chris':
+		  getTweet(command, (resp) => {
+			message.channel.send({embeds: [resp]});  
+		  });
+		  break;
+		  
+		  case 'debug':
+		  //message.channel.send({embeds: [debugImg]});
+		  message.channel.send("<:doubt:878211423942082580>");
+		  break;
+		  
+		  case 'height':
+		  args = baseArg != null ? baseArg.split(' ') : [];
+		  if (args.length == 1)
+			  message.channel.send(await processHeight(null, baseArg));
+		  else if (args.length == 2) {
+			  //myConsts.logger((`Args length is 2\r\nFirst arg: ${args[0]}\r\nSecond arg: ${args[1]}`));
+			  message.channel.send(await processHeight(null, args[0], parseInt(args[1])));
+		  }
+		  else
+		  {
+			  processHeight((resp) => {
+				  message.channel.send({embeds: [resp]});
+			  });
+		  }
+		  break;
+		  
+		  case 'guess':
+		  args = baseArg != null ? baseArg.split(' ') : [];
+		  if (args.length == 1)
+		  {
+			  NumberGame(parseInt(args[0]), (resp) => {
+				  message.channel.send(resp);
+			  });
+		  }
+		  break;
+		  
+		  case 'inspiro':
+		  case 'inspirobot':
+		  InspiroBot((resp) => {
+			message.channel.send({embeds: [resp]});	
+		  });
+		  break;
+		  
+		  case 'help':
+		  message.channel.send({embeds: [helpEmbed]});
+		  break;
+		  
+		  case 'guid':
+		  message.author.send(await getGuid());
+		  break;
+		  
+		  case 'dadjokes':
+		  DadJokes((resp) => {
+			 message.channel.send(resp); 
+		  });
+		  break;
+		  
+		  default:
+		  return;
+		  //message.channel.send("It's for you guys, <@155149108183695360>, <@204255221017214977>!");
+		  break;
+	  }
+	}
+	catch(err)
+	{
+		myConst.logger(err);
+	}
 });
 
 client.once('ready', () => {
