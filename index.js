@@ -158,7 +158,7 @@ function NumberGame(g, guessCB) {
 		}
 }
 
-function InspiroBot(inspiroCB) {
+let InspiroBot = new Promise(function(myResolve, myReject) {
 	const getOptions = {
 			hostname: 'inspirobot.me',
 			path: '/api?generate=true',
@@ -180,19 +180,21 @@ function InspiroBot(inspiroCB) {
 			myEmbed.image = myImage;
 			myEmbed.title = "InspiroBot says...";
 			myEmbed.color = Math.floor(Math.random() * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
-			return inspiroCB(myEmbed);
+			myResolve(myEmbed);
 		});
 		addr_res.on('error', (err) => {
 			myConsts.logger(err);
+			myReject('It seems InspiroBot doesn\'t want to talk right now...');
 		});
 	}).end();
 	
 	inspiroReq.on('error', (err) => {
 		myConsts.logger(err);
+		myReject('InspiroBot doesn\'t seem to be in a sharing mood...');
 	});
-}
+});
 
-function DadJokes(jokesCB) {
+let DadJokes = new Promise(function(myResolve, myReject) {
 	const getOptions = {
 			hostname: 'icanhazdadjoke.com',
 			path: `/search?limit=30&page=${Math.floor(Math.random() * 22)}`,
@@ -217,17 +219,19 @@ function DadJokes(jokesCB) {
 				jokesStr += jokesCollection[Math.floor(Math.random() * jokesCollection.length)].joke + '\r\n';
 			}
 			//console.log("String content: " + jokesStr);
-			return jokesCB(jokesStr);
+			myResolve(jokesStr);
 		});
 		jokeRes.on('error', (err) => {
 			myConsts.logger(err);
+			myReject('Apparently, we *cannot* haz dadjokes right now!');
 		});
 	}).end();
 	
 	jokesReq.on('error', (err) => {
 		myConsts.logger(err);
+		myReject('Apparently, we *cannot* haz dadjokes right now!');
 	});
-}
+});
 
 function calcImperial(height) {
 	var inches = height / 2.54;
@@ -414,7 +418,7 @@ function validatePrefix(p) {
 	return prefixes.indexOf(p);
 }
 
-function Goodnight(gnCB) {
+let Goodnight = new Promise(function(myResolve, myReject) {
 	var basePath = "D:\\run\\prompt-bot\\gn\\";
 	var num = Math.random();
 	fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
@@ -423,13 +427,14 @@ function Goodnight(gnCB) {
 			.filter(dirent => dirent.isFile())
 			.map(dirent => dirent.name);
 			//filteredFiles.sort();
-			return gnCB(fs.createReadStream(basePath + filteredFiles[Math.floor(num * filteredFiles.length)]));
+			myResolve(fs.createReadStream(basePath + filteredFiles[Math.floor(num * filteredFiles.length)]));
 		}
 		catch(err) {
 			myConsts.logger(err.name + ": " + err.message + "\r\n");
+			myReject('Welp, can\'t get an image, so I\'ll just say it myself, good night!');
 		}
 	});
-}
+});
 
 client.on("messageCreate", async function(message) {
 	try
@@ -447,9 +452,10 @@ client.on("messageCreate", async function(message) {
 	  
 	  else if (message.content.toLowerCase().startsWith('good night') || message.content.toLowerCase().startsWith('night') || message.content.toLowerCase().startsWith('g\'night'))
 	  {
-		  Goodnight((resp) => {
-			  message.channel.send({files: [resp]});
-		  });
+		  Goodnight.then(
+			function(imgStream) { message.channel.send({files: [imgStream]}); },
+			function(err) { message.channel.send(err); }
+		  );
 		  return;
 	  }
 	  
@@ -536,9 +542,10 @@ client.on("messageCreate", async function(message) {
 		  
 		  case 'inspiro':
 		  case 'inspirobot':
-		  InspiroBot((resp) => {
-			message.channel.send({embeds: [resp]});	
-		  });
+		  InspiroBot.then(
+			function(img) { message.channel.send({embeds: [img]}); },
+			function(err) { message.channel.send(err); }
+		  );
 		  break;
 		  
 		  case 'help':
@@ -550,9 +557,10 @@ client.on("messageCreate", async function(message) {
 		  break;
 		  
 		  case 'dadjokes':
-		  DadJokes((resp) => {
-			 message.channel.send(resp); 
-		  });
+		  DadJokes.then(
+			function(jokes) { message.channel.send(jokes); },
+			function(err) { message.channel.send(err); }
+		  );
 		  break;
 		  
 		  default:
