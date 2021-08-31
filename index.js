@@ -88,7 +88,7 @@ async function getGuid() {
   }
 }
 
-function NumberGame(g, guessCB) {
+function NumberGamePromise(g) {
 	const seedOptions = {
 			hostname: 'api.random.org',
 			path: '/json-rpc/4/invoke',
@@ -111,51 +111,56 @@ function NumberGame(g, guessCB) {
 			  "id": 1284
 		};
 		
-		try {
-			const seedReq = https.request(seedOptions, (res) => {
-			res.setEncoding('utf8');
+		let ngPromise = new Promise(function(myResolve, myReject) {
+			try {
+				const seedReq = https.request(seedOptions, (res) => {
+				res.setEncoding('utf8');
 
-			res.on('data', (chunk) => {
-				var mySeed = 0;
-				//myConsts.logger("Random.org response: " + chunk);
-				let parsedSeed = JSON.parse(chunk);
-				if (!(typeof parsedSeed.result === "undefined")) {
-					mySeed = Math.round(Math.cbrt(parsedSeed.result.random.data[0] * parsedSeed.result.random.data[1] * parsedSeed.result.random.data[2]));
-					//myConsts.logger("Seed per Random.org (Geometric Mean of 3 elements): " + mySeed);
-				}
-				else {
-					mySeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-					console.log("Seed per Math.random(): " + mySeed);
-				}
-				 
-				 var userGuess = parseInt(g);
-				 var target = (mySeed % userGuess) + 1;
-				 //console.log(`Guess: ${userGuess}\r\nVal: ${mySeed}\r\nTarget: ${target}`);
-				 var diff = Math.abs(userGuess - target);
-				 var near = Math.ceil(target * .15);
-				 if (diff > 0 && diff <= near)
-					 return guessCB(`You were close! It was ${target}!`);
-				 else if (diff > near)
-					 return guessCB(`Better luck next time! It was ${target}!`);
-				 else
-					 return guessCB(`It *was* ${target}! Lucky!`);
+				res.on('data', (chunk) => {
+					var mySeed = 0;
+					//myConsts.logger("Random.org response: " + chunk);
+					let parsedSeed = JSON.parse(chunk);
+					if (!(typeof parsedSeed.result === "undefined")) {
+						mySeed = Math.round(Math.cbrt(parsedSeed.result.random.data[0] * parsedSeed.result.random.data[1] * parsedSeed.result.random.data[2]));
+						//myConsts.logger("Seed per Random.org (Geometric Mean of 3 elements): " + mySeed);
+					}
+					else {
+						mySeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+						console.log("Seed per Math.random(): " + mySeed);
+					}
+					 
+					 var userGuess = parseInt(g);
+					 var target = (mySeed % userGuess) + 1;
+					 //console.log(`Guess: ${userGuess}\r\nVal: ${mySeed}\r\nTarget: ${target}`);
+					 var diff = Math.abs(userGuess - target);
+					 var near = Math.ceil(target * .15);
+					 if (diff > 0 && diff <= near)
+						 myResolve(`You were close! It was ${target}!`);
+					 else if (diff > near)
+						 myResolve(`Better luck next time! It was ${target}!`);
+					 else
+						 return myResolve(`It *was* ${target}! Lucky!`);
+				  
+				});
+				});
+
+			  seedReq.on('error', (e) => {
+				myConsts.logger(`problem with request: ${e.message}`);
+				myReject(`problem with request: ${e.message}`);
+			  });
 			  
-			});
-			});
-
-		  seedReq.on('error', (e) => {
-			myConsts.logger(`problem with request: ${e.message}`);
-		  });
-		  
-		  var postString = JSON.stringify(seedIn);
-		  // Write data to request body
-		  seedReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  seedReq.end();
-		  
-		} catch (e) {
-		  myConsts.logger(e.message);
-		}
+			  var postString = JSON.stringify(seedIn);
+			  // Write data to request body
+			  seedReq.write(postString);
+			  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
+			  seedReq.end();
+			  
+			} catch (e) {
+			  myConsts.logger(e.message);
+			  myReject(e.message);
+			}
+	});
+	return ngPromise;
 }
 
 function inspiroPromise() {
@@ -246,7 +251,7 @@ function calcImperial(height) {
 	return `${Math.trunc(feet)}'${Math.trunc(rem_inches)}"`;
 }
 
-async function processHeight(heightCB, uname = '', h = 0)
+async function processHeight(uname = '', h = 0)
 {
 	let conn;
 	let promptOut;
@@ -281,20 +286,24 @@ async function processHeight(heightCB, uname = '', h = 0)
 		}
 		else if (uname == '')
 		{
-			var allHeights = new MessageEmbed()
-			.setTitle('Known server heights')
-			.setColor('#0099ff');
-			var rows = await conn.query('SELECT * from pl_height order by metric_height desc');
-			//console.log('Here ' + rows);
-			rows.forEach(async function(h) {
-				allHeights.addField(h.name, `${h.metric_height} cm; ${calcImperial(h.metric_height)}`, true);
+			let heightPromise = new Promise(async function(myResolve) {
+				var allHeights = new MessageEmbed()
+				.setTitle('Known server heights')
+				.setColor('#0099ff');
+				var rows = await conn.query('SELECT * from pl_height order by metric_height desc');
+				//console.log('Here ' + rows);
+				rows.forEach(async function(h) {
+					allHeights.addField(h.name, `${h.metric_height} cm; ${calcImperial(h.metric_height)}`, true);
+				});
+				myResolve(allHeights);
 			});
-			promptOut = heightCB(allHeights);
+			promptOut = heightPromise;
 		}
 	}
 	catch (err)
 	{
 		myConsts.logger(err);
+		myReject(err);
 	}
 	finally
 	{
@@ -304,7 +313,7 @@ async function processHeight(heightCB, uname = '', h = 0)
 	}	
 }
 
-function getTweet(account, tweetCB) {
+function getTweetPromise(account) {
 	var num = Math.random();
 	var myEmbed = new Object();
 	var birdData = new Object();
@@ -367,55 +376,62 @@ function getTweet(account, tweetCB) {
 	//console.log(getOptions.path);
 	//Perform GET request with specified options.
 	let imgData = '';
-	//let account = accounts[Math.floor(num * accounts.length)];
-	const tweeetReq = https.request(getOptions, (addr_res) => {
-		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
-			addr_res.on('end', () => {
-			birdData = JSON.parse(imgData);
-			selectedTweet = birdData.data[Math.round(birdData.data.length * num)];
-			birdMedia = birdData.includes.media;
-			myImage = new Object();
-			
-			if ((typeof selectedTweet.attachments) != "undefined")
-			{
-				var selectedAttachmentKeyIndex =  selectedTweet.attachments.media_keys.length > 1 ? Math.floor(num * selectedTweet.attachments.media_keys.length) : 0;
-				var selectedMediaIndex = birdMedia.findIndex(media => media.media_key == selectedTweet.attachments.media_keys[selectedAttachmentKeyIndex]);
-				myImage.url = birdMedia[selectedMediaIndex].type == 'photo' ? birdMedia[selectedMediaIndex].url.toString() : birdMedia[selectedMediaIndex].preview_image_url.toString();
-				myEmbed.image = myImage;
-			}
-			
-			myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
-			myEmbed.title = selectedAccount.name;
-			
-			//Account for cases where either the URL ends the Tweet or is absent.
-			if (!selectedTweet.text.startsWith("https"))
-			{
-				var urlPos = selectedTweet.text.indexOf("https");
-				if (urlPos < 0)
+	
+	let tweetPromise = new Promise(function(myResolve, myReject) {
+	
+		//let account = accounts[Math.floor(num * accounts.length)];
+		const tweeetReq = https.request(getOptions, (addr_res) => {
+			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+				addr_res.on('end', () => {
+				birdData = JSON.parse(imgData);
+				selectedTweet = birdData.data[Math.round(birdData.data.length * num)];
+				birdMedia = birdData.includes.media;
+				myImage = new Object();
+				
+				if ((typeof selectedTweet.attachments) != "undefined")
 				{
-					myEmbed.description = selectedTweet.text;
+					var selectedAttachmentKeyIndex =  selectedTweet.attachments.media_keys.length > 1 ? Math.floor(num * selectedTweet.attachments.media_keys.length) : 0;
+					var selectedMediaIndex = birdMedia.findIndex(media => media.media_key == selectedTweet.attachments.media_keys[selectedAttachmentKeyIndex]);
+					myImage.url = birdMedia[selectedMediaIndex].type == 'photo' ? birdMedia[selectedMediaIndex].url.toString() : birdMedia[selectedMediaIndex].preview_image_url.toString();
+					myEmbed.image = myImage;
+				}
+				
+				myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+				myEmbed.title = selectedAccount.name;
+				
+				//Account for cases where either the URL ends the Tweet or is absent.
+				if (!selectedTweet.text.startsWith("https"))
+				{
+					var urlPos = selectedTweet.text.indexOf("https");
+					if (urlPos < 0)
+					{
+						myEmbed.description = selectedTweet.text;
+					}
+					else
+					{
+						myEmbed.url = selectedTweet.text.substring(urlPos);
+						myEmbed.description = selectedTweet.text.substring(0, urlPos);
+					}
 				}
 				else
 				{
-					myEmbed.url = selectedTweet.text.substring(urlPos);
-					myEmbed.description = selectedTweet.text.substring(0, urlPos);
+					myEmbed.url = selectedTweet.text;
+					myEmbed.description = 'A randomly selected Tweet.';
 				}
-			}
-			else
-			{
-				myEmbed.url = selectedTweet.text;
-				myEmbed.description = 'A randomly selected Tweet.';
-			}
-			return tweetCB(myEmbed);
-		});
-		addr_res.on('error', (err) => {
+				myResolve(myEmbed);
+			});
+			addr_res.on('error', (err) => {
+				myConsts.logger(err);
+				myReject(err);
+			});
+		}).end();
+		
+		tweeetReq.on('error', (err) => {
 			myConsts.logger(err);
+			myReject(err);
 		});
-	}).end();
-	
-	tweeetReq.on('error', (err) => {
-		myConsts.logger(err);
 	});
+	return tweetPromise;
 }
 
 const prefixes = ['!','?'];
@@ -512,9 +528,10 @@ client.on("messageCreate", async function(message) {
 		  case 'finn':
 		  case 'comfort':
 		  case 'chris':
-		  getTweet(command, (resp) => {
-			message.channel.send({embeds: [resp]});  
-		  });
+		  getTweetPromise(command).then(
+			function(resp) { message.channel.send({embeds: [resp]}); },
+			function(err) { message.channel.send(err); }
+		  );
 		  break;
 		  
 		  case 'debug':
@@ -525,16 +542,17 @@ client.on("messageCreate", async function(message) {
 		  case 'height':
 		  args = baseArg != null ? baseArg.split(' ') : [];
 		  if (args.length == 1)
-			  message.channel.send(await processHeight(null, baseArg));
+			  message.channel.send(await processHeight(baseArg));
 		  else if (args.length == 2) {
 			  //myConsts.logger((`Args length is 2\r\nFirst arg: ${args[0]}\r\nSecond arg: ${args[1]}`));
-			  message.channel.send(await processHeight(null, args[0], parseInt(args[1])));
+			  message.channel.send(await processHeight(args[0], parseInt(args[1])));
 		  }
 		  else
 		  {
-			  processHeight((resp) => {
-				  message.channel.send({embeds: [resp]});
-			  });
+			  processHeight().then(
+				function(res) { message.channel.send({embeds: [res]}); },
+				function(err) { message.channel.send(err); }
+			  );
 		  }
 		  break;
 		  
@@ -542,9 +560,10 @@ client.on("messageCreate", async function(message) {
 		  args = baseArg != null ? baseArg.split(' ') : [];
 		  if (args.length == 1)
 		  {
-			  NumberGame(parseInt(args[0]), (resp) => {
-				  message.channel.send(resp);
-			  });
+			  NumberGamePromise(parseInt(args[0])).then(
+				  function(resp) { message.channel.send(resp); },
+				  function(err) { message.channel.send(err); }
+			  );
 		  }
 		  break;
 		  
@@ -554,7 +573,6 @@ client.on("messageCreate", async function(message) {
 			function(img) { message.channel.send({embeds: [img]}); },
 			function(err) { message.channel.send(err); }
 		  );
-		  InspiroBot = null;
 		  break;
 		  
 		  case 'help':
