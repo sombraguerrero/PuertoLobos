@@ -158,80 +158,86 @@ function NumberGame(g, guessCB) {
 		}
 }
 
-let InspiroBot = new Promise(function(myResolve, myReject) {
-	const getOptions = {
-			hostname: 'inspirobot.me',
-			path: '/api?generate=true',
-			method: 'GET',
-			headers: {
-			  'User-Agent': myConsts.UA
-			}
-		  };
+function inspiroPromise() {
+	let InspiroBot = new Promise(function(myResolve, myReject) {
+		const getOptions = {
+				hostname: 'inspirobot.me',
+				path: '/api?generate=true',
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA
+				}
+			  };
 
-	//Perform GET request with specified options.
-	let imgData = '';
-	const inspiroReq = https.request(getOptions, (addr_res) => {
-		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
-			addr_res.on('end', () => {
-			
-			var myImage = new Object();
-			myImage.url = imgData;
-			var myEmbed = new Object();
-			myEmbed.image = myImage;
-			myEmbed.title = "InspiroBot says...";
-			myEmbed.color = Math.floor(Math.random() * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
-			myResolve(myEmbed);
-		});
-		addr_res.on('error', (err) => {
+		//Perform GET request with specified options.
+		let imgData = '';
+		const inspiroReq = https.request(getOptions, (addr_res) => {
+			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+				addr_res.on('end', () => {
+				
+				var myImage = new Object();
+				myImage.url = imgData;
+				var myEmbed = new Object();
+				myEmbed.image = myImage;
+				myEmbed.title = "InspiroBot says...";
+				myEmbed.color = Math.floor(Math.random() * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
+				myResolve(myEmbed);
+			});
+			addr_res.on('error', (err) => {
+				myConsts.logger(err);
+				myReject('It seems InspiroBot doesn\'t want to talk right now...');
+			});
+		}).end();
+		
+		inspiroReq.on('error', (err) => {
 			myConsts.logger(err);
-			myReject('It seems InspiroBot doesn\'t want to talk right now...');
+			myReject('InspiroBot doesn\'t seem to be in a sharing mood...');
 		});
-	}).end();
-	
-	inspiroReq.on('error', (err) => {
-		myConsts.logger(err);
-		myReject('InspiroBot doesn\'t seem to be in a sharing mood...');
 	});
-});
+	return InspiroBot;
+}
 
-let DadJokes = new Promise(function(myResolve, myReject) {
-	const getOptions = {
-			hostname: 'icanhazdadjoke.com',
-			path: `/search?limit=30&page=${Math.floor(Math.random() * 22)}`,
-			method: 'GET',
-			headers: {
-			  'User-Agent': myConsts.UA,
-			  'Accept': 'application/json'
-			}
-		  };
+function dadJokesPromise() {
+	let DadJokes = new Promise(function(myResolve, myReject) {
+		const getOptions = {
+				hostname: 'icanhazdadjoke.com',
+				path: `/search?limit=30&page=${Math.floor(Math.random() * myConsts.PAGES)}`,
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA,
+				  'Accept': 'application/json'
+				}
+			  };
 
-	//Perform GET request with specified options.
-	let jokesData = '';
-	const jokesReq = https.request(getOptions, (jokeRes) => {
-		jokeRes.on('data', (jokes) => { jokesData += jokes; });
-			jokeRes.on('end', () => {
-			
-			var jokesParsed = JSON.parse(jokesData);
-			var jokesCollection = jokesParsed.results;
-			var jokesStr = 'Jokes on request:\r\n';
-			for (i = 0; i < 3; i++)
-			{
-				jokesStr += jokesCollection[Math.floor(Math.random() * jokesCollection.length)].joke + '\r\n';
-			}
-			//console.log("String content: " + jokesStr);
-			myResolve(jokesStr);
-		});
-		jokeRes.on('error', (err) => {
+		//Perform GET request with specified options.
+		let jokesData = '';
+		const jokesReq = https.request(getOptions, (jokeRes) => {
+			jokeRes.on('data', (jokes) => { jokesData += jokes; });
+				jokeRes.on('end', () => {
+				
+				var jokesParsed = JSON.parse(jokesData);
+				var jokesCollection = jokesParsed.results;
+				var jokesStr = 'Jokes on request:\r\n';
+				for (i = 0; i < 3; i++)
+				{
+					jokesStr += jokesCollection[Math.floor(Math.random() * jokesCollection.length)].joke + '\r\n';
+				}
+				//console.log("String content: " + jokesStr);
+				myResolve(jokesStr);
+			});
+			jokeRes.on('error', (err) => {
+				myConsts.logger(err);
+				myReject('Apparently, we *cannot* haz dadjokes right now!');
+			});
+		}).end();
+		
+		jokesReq.on('error', (err) => {
 			myConsts.logger(err);
 			myReject('Apparently, we *cannot* haz dadjokes right now!');
 		});
-	}).end();
-	
-	jokesReq.on('error', (err) => {
-		myConsts.logger(err);
-		myReject('Apparently, we *cannot* haz dadjokes right now!');
 	});
-});
+	return DadJokes;
+}
 
 function calcImperial(height) {
 	var inches = height / 2.54;
@@ -418,24 +424,26 @@ function validatePrefix(p) {
 	return prefixes.indexOf(p);
 }
 
-let Goodnight = new Promise(function(myResolve, myReject) {
-	var basePath = "D:\\run\\prompt-bot\\gn\\";
-	var num = Math.random();
-	fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
-		try {
-			const filteredFiles = files
-			.filter(dirent => dirent.isFile())
-			.map(dirent => dirent.name);
-			//filteredFiles.sort();
-			myResolve(fs.createReadStream(basePath + filteredFiles[Math.floor(num * filteredFiles.length)]));
-		}
-		catch(err) {
-			myConsts.logger(err.name + ": " + err.message + "\r\n");
-			myReject('Welp, can\'t get an image, so I\'ll just say it myself, good night!');
-		}
+function goodNightPromise() {
+	let Goodnight = new Promise(function(myResolve, myReject) {
+		var basePath = "D:\\run\\prompt-bot\\gn\\";
+		var num = Math.random();
+		fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
+			try {
+				const filteredFiles = files
+				.filter(dirent => dirent.isFile())
+				.map(dirent => dirent.name);
+				//filteredFiles.sort();
+				myResolve(fs.createReadStream(basePath + filteredFiles[Math.floor(num * filteredFiles.length)]));
+			}
+			catch(err) {
+				myConsts.logger(err.name + ": " + err.message + "\r\n");
+				myReject('Welp, can\'t get an image, so I\'ll just say it myself, good night!');
+			}
+		});
 	});
-});
-
+	return Goodnight;
+}
 client.on("messageCreate", async function(message) {
 	try
 	{
@@ -452,7 +460,7 @@ client.on("messageCreate", async function(message) {
 	  
 	  else if (message.content.toLowerCase().startsWith('good night') || message.content.toLowerCase().startsWith('night') || message.content.toLowerCase().startsWith('g\'night'))
 	  {
-		  Goodnight.then(
+		  goodNightPromise().then(
 			function(imgStream) { message.channel.send({files: [imgStream]}); },
 			function(err) { message.channel.send(err); }
 		  );
@@ -542,10 +550,11 @@ client.on("messageCreate", async function(message) {
 		  
 		  case 'inspiro':
 		  case 'inspirobot':
-		  InspiroBot.then(
+		  inspiroPromise().then(
 			function(img) { message.channel.send({embeds: [img]}); },
 			function(err) { message.channel.send(err); }
 		  );
+		  InspiroBot = null;
 		  break;
 		  
 		  case 'help':
@@ -557,7 +566,7 @@ client.on("messageCreate", async function(message) {
 		  break;
 		  
 		  case 'dadjokes':
-		  DadJokes.then(
+		  dadJokesPromise().then(
 			function(jokes) { message.channel.send(jokes); },
 			function(err) { message.channel.send(err); }
 		  );
@@ -571,7 +580,7 @@ client.on("messageCreate", async function(message) {
 	}
 	catch(err)
 	{
-		myConst.logger(err);
+		myConsts.logger(err);
 	}
 });
 
