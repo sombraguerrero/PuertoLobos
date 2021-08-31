@@ -139,7 +139,7 @@ function NumberGamePromise(g) {
 					 else if (diff > near)
 						 myResolve(`Better luck next time! It was ${target}!`);
 					 else
-						 return myResolve(`It *was* ${target}! Lucky!`);
+						 myResolve(`It *was* ${target}! Lucky!`);
 				  
 				});
 				});
