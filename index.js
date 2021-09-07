@@ -3,6 +3,7 @@ const client = new Client({ intents: ["GUILDS", "GUILD_MESSAGES", "DIRECT_MESSAG
 const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
 const https = require('https');
+const http = require('http');
 const fs = require('fs');
 const pool = mariadb.createPool({
      host: myConsts.conn.host, 
@@ -26,7 +27,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'height [tallest, shortest, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
 		{ name: 'guess <number>', value: 'See how close you get to a randomly generated number!', inline: true },
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
-		{ name: 'guid', value: 'DMs the sender a type 1 UUID.', inline: true }
+		{ name: 'guid, uuid', value: 'DMs the sender a type 1 UUID.', inline: true }
 		
 	);
 	
@@ -71,6 +72,36 @@ async function getPrompt(kind) {
   }
 }
 
+function uuidPromise() {
+	return new Promise(function(myResolve, myReject) {
+		const getOptions = {
+				hostname: '10.0.0.133',
+				path: '/guid.php',
+				method: 'GET'
+			  };
+
+		//Perform GET request with specified options.
+		let guidData = '';
+		const guidReq = http.request(getOptions, (guidRes) => {
+			guidRes.on('data', (guid) => { guidData += guid; });
+				guidRes.on('end', () => {
+				//console.log("String content: " + jokesStr);
+				myResolve(guidData);
+			});
+			guidRes.on('error', (err) => {
+				myConsts.logger(err);
+				myReject('Hmm, couldn\'t get a UUID for some reason...');
+			});
+		}).end();
+		
+		guidReq.on('error', (err) => {
+			myConsts.logger(err);
+			myReject('Hmm, couldn\'t get a UUID for some reason...');
+		});
+	});
+}
+
+/***
 async function getGuid() {
   let conn;
   let promptOut;
@@ -87,6 +118,7 @@ async function getGuid() {
 	return promptOut;	
   }
 }
+***/
 
 function NumberGamePromise(g) {
 	const seedOptions = {
@@ -442,7 +474,7 @@ function validatePrefix(p) {
 
 function goodNightPromise() {
 	let Goodnight = new Promise(function(myResolve, myReject) {
-		var basePath = "D:\\run\\prompt-bot\\gn\\";
+		var basePath = "./prompt-bot/gn/";
 		var num = Math.random();
 		fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
 			try {
@@ -470,7 +502,7 @@ client.on("messageCreate", async function(message) {
 	  
 	  else if (message.content.toLowerCase().startsWith('good morning') || message.content.toLowerCase().startsWith('morning'))
 	  {
-		  message.channel.send({files: [fs.createReadStream('D:\\run\\prompt-bot\\wakeup.gif')]});
+		  message.channel.send({files: [fs.createReadStream('./prompt-bot/wakeup.gif')]});
 		  return;
 	  }
 	  
@@ -580,7 +612,12 @@ client.on("messageCreate", async function(message) {
 		  break;
 		  
 		  case 'guid':
-		  message.author.send(await getGuid());
+		  case 'uuid':
+		  //message.author.send(await getGuid());
+			uuidPromise().then(
+				function(guid) { message.author.send(guid); },
+				function(err) { message.channel.send(err); }
+		  );
 		  break;
 		  
 		  case 'dadjokes':
