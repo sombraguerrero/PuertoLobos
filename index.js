@@ -13,6 +13,7 @@ const pool = mariadb.createPool({
 	 database: myConsts.conn.database,
      connectionLimit: myConsts.conn.connectionLimit
 });
+const { randomUUID: uuidv4 } = require('crypto');
 
 const helpEmbed = new MessageEmbed()
 	.setColor('#0099ff')
@@ -27,7 +28,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'height [tallest, shortest, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
 		{ name: 'guess <number>', value: 'See how close you get to a randomly generated number!', inline: true },
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
-		{ name: 'guid, uuid', value: 'DMs the sender a type 1 UUID.', inline: true }
+		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true }
 		
 	);
 	
@@ -72,54 +73,6 @@ async function getPrompt(kind) {
   }
 }
 
-function uuidPromise() {
-	return new Promise(function(myResolve, myReject) {
-		const getOptions = {
-				hostname: '10.0.0.133',
-				path: '/guid.php',
-				method: 'GET'
-			  };
-
-		//Perform GET request with specified options.
-		let guidData = '';
-		const guidReq = http.request(getOptions, (guidRes) => {
-			guidRes.on('data', (guid) => { guidData += guid; });
-				guidRes.on('end', () => {
-				//console.log("String content: " + jokesStr);
-				myResolve(guidData);
-			});
-			guidRes.on('error', (err) => {
-				myConsts.logger(err);
-				myReject('Hmm, couldn\'t get a UUID for some reason...');
-			});
-		}).end();
-		
-		guidReq.on('error', (err) => {
-			myConsts.logger(err);
-			myReject('Hmm, couldn\'t get a UUID for some reason...');
-		});
-	});
-}
-
-/***
-async function getGuid() {
-  let conn;
-  let promptOut;
-   try {
-	conn = await pool.getConnection();
-	const row = await conn.query("SELECT UUID() AS 'Guid'");
-	promptOut = row[0].Guid.toUpperCase();
-
-  } catch (err) {
-	myConsts.logger(err);
-  } finally {
-	if (conn)
-		conn.end();
-	return promptOut;	
-  }
-}
-***/
-
 function NumberGamePromise(g) {
 	const seedOptions = {
 			hostname: 'api.random.org',
@@ -143,7 +96,7 @@ function NumberGamePromise(g) {
 			  "id": 1284
 		};
 		
-		let ngPromise = new Promise(function(myResolve, myReject) {
+		return new Promise(function(myResolve, myReject) {
 			try {
 				const seedReq = https.request(seedOptions, (res) => {
 				res.setEncoding('utf8');
@@ -192,11 +145,10 @@ function NumberGamePromise(g) {
 			  myReject(e.message);
 			}
 	});
-	return ngPromise;
 }
 
 function inspiroPromise() {
-	let InspiroBot = new Promise(function(myResolve, myReject) {
+	return new Promise(function(myResolve, myReject) {
 		const getOptions = {
 				hostname: 'inspirobot.me',
 				path: '/api?generate=true',
@@ -231,11 +183,10 @@ function inspiroPromise() {
 			myReject('InspiroBot doesn\'t seem to be in a sharing mood...');
 		});
 	});
-	return InspiroBot;
 }
 
 function dadJokesPromise() {
-	let DadJokes = new Promise(function(myResolve, myReject) {
+	return new Promise(function(myResolve, myReject) {
 		const getOptions = {
 				hostname: 'icanhazdadjoke.com',
 				path: `/search?limit=30&page=${Math.floor(Math.random() * myConsts.PAGES)}`,
@@ -273,7 +224,6 @@ function dadJokesPromise() {
 			myReject('Apparently, we *cannot* haz dadjokes right now!');
 		});
 	});
-	return DadJokes;
 }
 
 function calcImperial(height) {
@@ -409,7 +359,7 @@ function getTweetPromise(account) {
 	//Perform GET request with specified options.
 	let imgData = '';
 	
-	let tweetPromise = new Promise(function(myResolve, myReject) {
+	return new Promise(function(myResolve, myReject) {
 	
 		//let account = accounts[Math.floor(num * accounts.length)];
 		const tweeetReq = https.request(getOptions, (addr_res) => {
@@ -463,7 +413,6 @@ function getTweetPromise(account) {
 			myReject(err);
 		});
 	});
-	return tweetPromise;
 }
 
 const prefixes = ['!','?'];
@@ -473,7 +422,7 @@ function validatePrefix(p) {
 }
 
 function goodNightPromise() {
-	let Goodnight = new Promise(function(myResolve, myReject) {
+	return new Promise(function(myResolve, myReject) {
 		var basePath = "./prompt-bot/gn/";
 		var num = Math.random();
 		fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
@@ -490,7 +439,6 @@ function goodNightPromise() {
 			}
 		});
 	});
-	return Goodnight;
 }
 client.on("messageCreate", async function(message) {
 	try
@@ -613,11 +561,13 @@ client.on("messageCreate", async function(message) {
 		  
 		  case 'guid':
 		  case 'uuid':
-		  //message.author.send(await getGuid());
+			  message.author.send(uuidv4().toUpperCase());
+		  /*message.author.send(await getGuid());
 			uuidPromise().then(
 				function(guid) { message.author.send(guid); },
 				function(err) { message.channel.send(err); }
 		  );
+		  */
 		  break;
 		  
 		  case 'dadjokes':
