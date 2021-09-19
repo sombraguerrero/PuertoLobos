@@ -448,13 +448,13 @@ client.on("messageCreate", async function(message) {
 		  return;
 	  }
 	  
-	  else if (message.content.toLowerCase().startsWith('good morning') || message.content.toLowerCase().startsWith('morning'))
+	  else if (message.content.toLowerCase().startsWith('good morning'))
 	  {
 		  message.channel.send({files: [fs.createReadStream('./prompt-bot/wakeup.gif')]});
 		  return;
 	  }
 	  
-	  else if (message.content.toLowerCase().startsWith('good night') || message.content.toLowerCase().startsWith('night') || message.content.toLowerCase().startsWith('g\'night'))
+	  else if (message.content.toLowerCase().startsWith('good night'))
 	  {
 		  goodNightPromise().then(
 			function(imgStream) { message.channel.send({files: [imgStream]}); },
@@ -496,7 +496,7 @@ client.on("messageCreate", async function(message) {
 		  break;
 		  
 		  case "8ball":
-		  message.reply(await getPrompt(true));
+		  message.reply(await getPrompt('answer'));
 		  break;
 		  
 		  case "marco":
@@ -576,6 +576,10 @@ client.on("messageCreate", async function(message) {
 			function(err) { message.channel.send(err); }
 		  );
 		  break;
+			  
+		  case 'brad':
+			  message.channel.send('ABAP - All Brads are :pig:');
+			  break;
 		  
 		  default:
 		  return;
