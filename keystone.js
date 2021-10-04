@@ -115,7 +115,7 @@ function RandomColor(num) {
 	//Credit to Russell Heimlich (http://www.russellheimlich.com/blog) for the image generator.
 	const getOptions = {
 			hostname: 'localhost',
-			path: "/dummyimage/code.php?x=640x480/" + hexColor + "/FFF/&text=0x" + hexColor + encodeURIComponent(rgbStr),
+			path: `/dummyimage/code.php?x=640x480/${hexColor}/FFF/&text=0x${hexColor.toUpperCase()}${encodeURIComponent(rgbStr)}`,
 			method: 'GET',
 			headers: {
 			  'User-Agent': myConsts.UA
@@ -1279,7 +1279,7 @@ function Pokemon(num) {
 	//Using request method for the get too, so calling end() here too.
 	contentReq.end();
 	contentReq.on('error', (e) => {
-	  console.error(`Got error: ${e.message}`);
+	  console.log(`Got error: ${e.message}`);
 	});
 }
 
@@ -1388,87 +1388,109 @@ console.log(`Main value: ${val}\r\nTask value: ${task}`);
 switch (task % 19) {
 //switch (debugVal) {
 	case 0:
-	//console.log('JOKE!!!');
+	console.log('Dad Joke selected.\n');
 	pullStuff(false, 'icanhazdadjoke.com', '');
 	break;
 	
 	case 1:
-	//console.log('ROCK FACT!!!');
+	console.log('Useless Fact selected.\n');
 	pullStuff(true, 'uselessfacts.jsph.pl', '/random.txt?language=en');
 	break;
 	
 	case 2:
-	//console.log('FORM RESPONSE!!!');
+	console.log('Key Responses selected.\n');
 	getKeyResponse();
 	break;
 	
 	case 3:
+	console.log('NASA APOD selected.\n');
 	NasaAPOD(selectDate(val, "apod"), val);
 	break;
 	
 	case 4:
+	console.log('Trivia selected.\n');
 	JeopardyQ();
 	break;
 	
 	case 5:
+	console.log('Advice selected.\n');
 	AdviceSlip();
 	break;
 	
 	case 6:
+	console.log('Random Pokemon selected.\n');
 	Pokemon(val);
 	break;
 	
 	case 7:
-	if (Math.round(MersenneTwister.random()) == 1)
+	if (Math.round(MersenneTwister.random()) == 1) {
+		console.log('Chuck Norris won the coin toss in option 7, because he\'s Chuck Norris!!!\n');
 		ChuckNorris();
-	else
-		CatAsService();
+	}
+	else {
+		console.log('A random cat won the coin toss in option 7, because cat!\n');
+		CatAsService(val);
+	}
 	break;
 	
 	case 8:
+	console.log('This Or That selected.\n');
 	ThisOrThat();
 	break;
 	
 	case 9:
+	console.log('Affirmations selected.\n');
 	Affirm();
 	break;
 	
 	case 10:
+	console.log('Unsplash selected.\n');
 	Unsplash(val);
 	break;
 	
 	case 11:
+	console.log('InspiroBot selected.\n');
 	InspiroBot(val);
 	break;
 	
 	case 12:
+	console.log('Random color selected.\n');
 	RandomColor(val);
 	break;
 	
 	case 13:
+	console.log('Mars Rover photo selected.\n');
 	NasaMRover(val);
 	break;
 	
 	case 14:
+	console.log('Random Dog selected.\n');
 	DogAsService(val);
 	break;
 	
 	case 15:
+	console.log('Random Dog Fact selected.\n');
 	DogFact();
 	break;
 	
 	case 16:
+	console.log('Random Cat selected.\n');
 	CatAsService(val);
 	break;
 	
 	case 17:
+	console.log('Random Cat Fact selected.\n');
 	CatFact();
 	break;
 	
 	default:
-	if (Math.round(MersenneTwister.random()) == 1)
+	if (Math.round(MersenneTwister.random()) == 1) {
+		console.log('NatalieDee selected.\n');
 		NatalieDee(selectDate(val, "nat"));
-	else
-		CatAsService();
+	}
+	else {
+		console.log('Random cat beat NatalieDee in a coin toss, because cat!\n');
+		CatAsService(val);
+	}
 	break;
 }
