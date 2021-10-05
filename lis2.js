@@ -12,7 +12,7 @@ function Artwork() {
 	fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
 		try {
 			const filteredFiles = files
-			.filter(dirent => dirent.isFile())
+			.filter(dirent => dirent.isFile() && !(dirent.name.endsWith('.ini') || dirent.name.endsWith('.db')))
 			.map(dirent => dirent.name);
 			//filteredFiles.sort();
 			var selectedImg = filteredFiles[Math.round(MersenneTwister.random() * Number.MAX_SAFE_INTEGER) % filteredFiles.length];
