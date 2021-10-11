@@ -28,7 +28,8 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'height [tallest, shortest, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
 		{ name: 'guess <number>', value: 'See how close you get to a randomly generated number!', inline: true },
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
-		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true }
+		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
+		{ name: 'time', value: 'Returns current time (relative to bot\'s local time) in multiple time zones.', inline: true }
 		
 	);
 	
@@ -254,6 +255,11 @@ async function processHeight(uname = '', h = 0)
 				row = await conn.query('SELECT * from pl_height order by metric_height desc limit 1');
 				promptOut = `${row[0].name} is the tallest person on the server at ${row[0].metric_height} centimetres or ${calcImperial(row[0].metric_height)}.`;
 				break;
+					
+				case 'average':
+				row = await conn.query('SELECT AVG(metric_height) as \'average\' FROM pl_height');
+				promptOut = `Average height on the server is ${Math.round(row[0].average)} centimetres or ${calcImperial(row[0].average)}.`;
+				break;
 				
 				default:
 				row = await conn.query("SELECT * from pl_height where name = ?", [uname.toUpperCase()]);
@@ -281,6 +287,40 @@ async function processHeight(uname = '', h = 0)
 			});
 			promptOut = heightPromise;
 		}
+	}
+	catch (err)
+	{
+		myConsts.logger(err);
+		myReject(err);
+	}
+	finally
+	{
+		if (conn)
+			conn.end();
+		return promptOut;
+	}	
+}
+
+async function getTimePromise() {
+	let conn;
+	let promptOut;
+	try {
+		conn = await pool.getConnection();
+		let timePromise = new Promise(async function(myResolve) {
+				var allTimes = new MessageEmbed()
+				.setTitle('Current Time is...')
+				.setColor('#0099ff');
+				var rows = await conn.query("SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'UTC') AS timeConverted, 'UTC' AS zone UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Los_Angeles'), 'Pacific' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Denver'), 'Mountain' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Chicago'), 'Central' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/New_York'), 'Eastern' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Sao_Paulo'), 'Brazil' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Dublin'), 'UK' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'CET'), 'Italy/Slovenia/Switzerland' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Bucharest'), 'Romania' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Asia/Manila'), 'Philippines' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Australia/Melbourne'), 'Australia'");
+				
+			rows.forEach(async function(myTime) {
+				allTimes.addField(myTime.zone, myTime.timeConverted.toString(), true);
+				//console.log('Entropy!!\r\n');
+				//console.log(myTime.zone + '- ' + myTime.timeConverted + '\r\n');
+			});
+			
+				myResolve(allTimes);
+		});
+		promptOut = timePromise;
 	}
 	catch (err)
 	{
@@ -546,6 +586,13 @@ client.on("messageCreate", async function(message) {
 			  );
 		  }
 		  break;
+			  
+		  case 'time':
+			  getTimePromise().then(
+				function(res) { message.channel.send({embeds: [res]}); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
 		  
 		  case 'inspiro':
 		  case 'inspirobot':
