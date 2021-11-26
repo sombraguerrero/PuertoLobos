@@ -206,10 +206,10 @@ function dadJokesPromise() {
 				
 				var jokesParsed = JSON.parse(jokesData);
 				var jokesCollection = jokesParsed.results;
-				var jokesStr = 'Jokes on request:\r\n';
-				for (i = 0; i < 3; i++)
+				var jokesStr = '';
+				for (i = 1; i <= 3; i++)
 				{
-					jokesStr += jokesCollection[Math.floor(Math.random() * jokesCollection.length)].joke + '\r\n';
+					jokesStr += i + '.\t' + jokesCollection[Math.floor(Math.random() * jokesCollection.length)].joke + '\r\n';
 				}
 				//console.log("String content: " + jokesStr);
 				myResolve(jokesStr);
@@ -638,6 +638,10 @@ client.on("messageCreate", async function(message) {
 	{
 		myConsts.logger(err);
 	}
+});
+
+client.on('error', (err) => {
+	myConsts.logger(err);
 });
 
 client.once('ready', () => {
