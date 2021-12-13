@@ -114,25 +114,17 @@ function NumberGamePromise(g) {
 						mySeed = Math.floor(Math.random() * myConsts.GUESS_MAX);
 						console.log("Seed per Math.random(): " + mySeed);
 					}
-					 
-					 var userGuess = parseInt(g);
-					 //console.log(`Guess: ${userGuess}\r\nVal: ${mySeed}\r\nTarget: ${target}`);
-					if (userGuess <= myConsts.GUESS_MAX)
-					{
-						 var diff = Math.abs(userGuess - mySeed);
-						 var near = Math.ceil(mySeed * .15);
-						 if (diff > 0 && diff <= near)
-							 myResolve(`You were close! It was ${mySeed}!`);
-						 else if (diff > near)
-							 myResolve(`Better luck next time! It was ${mySeed}!`);
-						 else
-							 myResolve(`It *was* ${mySeed}! Lucky!`);
-					}
+					var lowerBound = mySeed - Math.ceil(mySeed * .15);
+					console.log("LB: " + lowerBound);
+					var upperBound = Math.ceil(mySeed * 1.15);
+					console.log("UB: " + upperBound);
+					console.log("User Guess: " + g);
+					if (g >= lowerBound && g <= upperBound)
+						myResolve(`You were close! It was ${mySeed}!`);
+					else if (g < lowerBound || g >= upperBound)
+						myResolve(`Better luck next time! It was ${mySeed}!`);
 					else
-					{
-						myResolve(`Uhh, you're over the limit by ${userGuess - myConsts.GUESS_MAX}...`);
-					}
-				  
+						myResolve(`It *was* ${mySeed}! Lucky!`);
 				});
 				});
 
@@ -584,13 +576,16 @@ client.on("messageCreate", async function(message) {
 		  
 		  case 'guess':
 		  args = baseArg != null ? baseArg.split(' ') : [];
-		  if (args.length == 1)
+		  if (args.length == 1 && parseInt(args[0]) <= myConsts.GUESS_MAX)
 		  {
 			  NumberGamePromise(parseInt(args[0])).then(
 				  function(resp) { message.channel.send(resp); },
 				  function(err) { message.channel.send(err); }
 			  );
 		  }
+		 else {
+		 	message.channel.send("Nope, can't guess with that!");
+		 }
 		  break;
 			  
 		  case 'time':
