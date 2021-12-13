@@ -26,7 +26,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'sean, daniel, finn, comfort, chris', value: 'Responds with a random Tweet from the daily character accounts.', inline: true },
 		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
 		{ name: 'height [tallest, shortest, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
-		{ name: 'guess <number>', value: 'See how close you get to a randomly generated number!', inline: true },
+		{ name: 'guess <number>', value: `Guess a positive integer between 0 and ${myConsts.GUESS_MAX}!`, inline: true },
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
 		{ name: 'time', value: 'Returns current time (relative to bot\'s local time) in multiple time zones.', inline: true }
@@ -92,7 +92,7 @@ function NumberGamePromise(g) {
 			  "apiKey": myConsts.RAND_ORG,
 			  "n": 3,
 			  "min": 0,
-			  "max": 2000000
+			  "max": myConsts.GUESS_MAX //upper bound is 1000000000
 			  },
 			  "id": 1284
 		};
@@ -106,26 +106,32 @@ function NumberGamePromise(g) {
 					var mySeed = 0;
 					//myConsts.logger("Random.org response: " + chunk);
 					let parsedSeed = JSON.parse(chunk);
-					if (!(typeof parsedSeed.result === "undefined")) {
+					if (typeof parsedSeed.result !== "undefined") {
 						mySeed = Math.round(Math.cbrt(parsedSeed.result.random.data[0] * parsedSeed.result.random.data[1] * parsedSeed.result.random.data[2]));
 						//myConsts.logger("Seed per Random.org (Geometric Mean of 3 elements): " + mySeed);
 					}
 					else {
-						mySeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+						mySeed = Math.floor(Math.random() * myConsts.GUESS_MAX);
 						console.log("Seed per Math.random(): " + mySeed);
 					}
 					 
 					 var userGuess = parseInt(g);
-					 var target = (mySeed % userGuess) + 1;
 					 //console.log(`Guess: ${userGuess}\r\nVal: ${mySeed}\r\nTarget: ${target}`);
-					 var diff = Math.abs(userGuess - target);
-					 var near = Math.ceil(target * .15);
-					 if (diff > 0 && diff <= near)
-						 myResolve(`You were close! It was ${target}!`);
-					 else if (diff > near)
-						 myResolve(`Better luck next time! It was ${target}!`);
-					 else
-						 myResolve(`It *was* ${target}! Lucky!`);
+					if (userGuess <= myConsts.GUESS_MAX)
+					{
+						 var diff = Math.abs(userGuess - mySeed);
+						 var near = Math.ceil(mySeed * .15);
+						 if (diff > 0 && diff <= near)
+							 myResolve(`You were close! It was ${mySeed}!`);
+						 else if (diff > near)
+							 myResolve(`Better luck next time! It was ${mySeed}!`);
+						 else
+							 myResolve(`It *was* ${mySeed}! Lucky!`);
+					}
+					else
+					{
+						myResolve(`Uhh, you're over the limit by ${userGuess - myConsts.GUESS_MAX}...`);
+					}
 				  
 				});
 				});
