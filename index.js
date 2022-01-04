@@ -90,7 +90,7 @@ function NumberGamePromise(g) {
 		  "method": "generateIntegers",
 		  "params": {
 			  "apiKey": myConsts.RAND_ORG,
-			  "n": 3,
+			  "n": 1,
 			  "min": 0,
 			  "max": myConsts.GUESS_MAX //upper bound is 1000000000
 			  },
@@ -107,7 +107,8 @@ function NumberGamePromise(g) {
 					//myConsts.logger("Random.org response: " + chunk);
 					let parsedSeed = JSON.parse(chunk);
 					if (typeof parsedSeed.result !== "undefined") {
-						mySeed = Math.round(Math.cbrt(parsedSeed.result.random.data[0] * parsedSeed.result.random.data[1] * parsedSeed.result.random.data[2]));
+						//mySeed = Math.round(Math.cbrt(parsedSeed.result.random.data[0] * parsedSeed.result.random.data[1] * parsedSeed.result.random.data[2]));
+						mySeed = parsedSeed.result.random.data[0];
 						//myConsts.logger("Seed per Random.org (Geometric Mean of 3 elements): " + mySeed);
 					}
 					else {
@@ -119,12 +120,12 @@ function NumberGamePromise(g) {
 					var upperBound = Math.ceil(mySeed * 1.15);
 					console.log("UB: " + upperBound);
 					console.log("User Guess: " + g);
-					if (g >= lowerBound && g <= upperBound)
-						myResolve(`You were close! It was ${mySeed}!`);
-					else if (g < lowerBound || g >= upperBound)
-						myResolve(`Better luck next time! It was ${mySeed}!`);
-					else
+					if (g == mySeed)
 						myResolve(`It *was* ${mySeed}! Lucky!`);
+					else if (g >= lowerBound && g <= upperBound)
+						myResolve(`You were close! It was ${mySeed}!`);
+					else if (g < lowerBound || g > upperBound)
+						myResolve(`Better luck next time! It was ${mySeed}!`);
 				});
 				});
 
@@ -461,7 +462,7 @@ function validatePrefix(p) {
 
 function goodNightPromise() {
 	return new Promise(function(myResolve, myReject) {
-		var basePath = "./prompt-bot/gn/";
+		var basePath = "gn/";
 		var num = Math.random();
 		fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
 			try {
@@ -488,7 +489,7 @@ client.on("messageCreate", async function(message) {
 	  
 	  else if (message.content.toLowerCase().startsWith('good morning'))
 	  {
-		  message.channel.send({files: [fs.createReadStream('./prompt-bot/wakeup.gif')]});
+		  message.channel.send({files: [fs.createReadStream('wakeup.gif')]});
 		  return;
 	  }
 	  
