@@ -23,7 +23,8 @@ function getKeyResponse() {
 		.then(conn => {
 			conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', ['key'])
 			.then(row => {
-				writeKeyEmbed(row[0].prompt);
+				var survey = { "content": `${myConsts.GREG} ${row[0].prompt}` }
+				writeToDiscord(survey, 'Survey Response');
 				conn.end();
 			})
 			.catch(err => {
@@ -41,10 +42,8 @@ function getKeyResponse() {
 	 
 }
 
-function writeKeyEmbed(str) {
-	var keyStone = new Object();
-	keyStone.content = myConsts.GREG + ' ' + str;
-	var postString = JSON.stringify(keyStone);
+function writeToDiscord(objIn, activity) {
+	var postString = JSON.stringify(objIn);
 		  const discordOptions = {
 			hostname: 'discord.com',
 			path: `/api/webhooks/${myConsts.PL_botspam}`,
@@ -61,10 +60,10 @@ function writeKeyEmbed(str) {
 			res.setEncoding('utf8');
 
 			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
+			  console.log(`BODY: ${chunk}\r\n`);
 			});
 			res.on('end', () => {
-			  console.log('No more data in response.');
+			  console.log(`Activity: ${activity}\r\n`);
 			});
 		  });
 
@@ -76,26 +75,13 @@ function writeKeyEmbed(str) {
 		  discordReq.write(postString);
 		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
 		  discordReq.end();
-		  console.log(postString);
+		  //console.log(postString);
 }
 
 function NatalieDee(comicDate) {
 	var myRoot = new Object();
 	myRoot.content = `${myConsts.GREG}\r\nhttp://nataliedee.com/${comicDate}`;
-	var postString = JSON.stringify(myRoot);
-	console.log(postString);
-	const discordOptions = {
-		hostname: 'discord.com',
-		path: `/api/webhooks/${myConsts.PL_botspam}`,
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			'Content-Length': Buffer.byteLength(postString)
-		}
-	}
-	const discordReq = https.request(discordOptions);
-	discordReq.write(postString);
-	discordReq.end();
+	writeToDiscord(myRoot, `Natalie Dee (${comicDate})`);
 }
 
 function RandomColor(num) {
@@ -162,20 +148,7 @@ function InspiroBot(num) {
 			myRoot.embeds = new Array();
 			myRoot.embeds.push(myEmbed);
 			myRoot.content = myConsts.GREG;
-			var embedString = JSON.stringify(myRoot);
-			console.log(embedString);
-			const discordOptions = {
-				hostname: 'discord.com',
-				path: `/api/webhooks/${myConsts.PL_botspam}`,
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Content-Length': Buffer.byteLength(embedString)
-				}
-			}
-			const discordReq = https.request(discordOptions);
-			discordReq.write(embedString);
-			discordReq.end();
+			writeToDiscord(myRoot, 'InspiroBot');
 		});
 	}).end();
 }
@@ -207,20 +180,7 @@ function CatAsService(num) {
 			myRoot.embeds = new Array();
 			myRoot.embeds.push(myEmbed);
 			myRoot.content = myConsts.GREG
-			var embedString = JSON.stringify(myRoot);
-			console.log(embedString);
-			const discordOptions = {
-				hostname: 'discord.com',
-				path: `/api/webhooks/${myConsts.PL_botspam}`,
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Content-Length': Buffer.byteLength(embedString)
-				}
-			}
-			const discordReq = https.request(discordOptions);
-			discordReq.write(embedString);
-			discordReq.end();
+			writeToDiscord(myRoot, 'Random cat!');
 		});
 	}).end();
 }
@@ -254,20 +214,7 @@ function DogAsService(num) {
 				myRoot.embeds = new Array();
 				myRoot.embeds.push(myEmbed);
 				myRoot.content = myConsts.GREG
-				var embedString = JSON.stringify(myRoot);
-				console.log(embedString);
-				const discordOptions = {
-					hostname: 'discord.com',
-					path: `/api/webhooks/${myConsts.PL_botspam}`,
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Content-Length': Buffer.byteLength(embedString)
-					}
-				}
-				const discordReq = https.request(discordOptions);
-				discordReq.write(embedString);
-				discordReq.end();
+				writeToDiscord(myRoot, 'Random dog!');
 			});
 	}).end();
 }
@@ -301,43 +248,13 @@ function pullStuff(rockFact, target, targetpath) {
 				var rockFactLines = rawData.split(/\r?\n/);
 				postData.content = myConsts.GREG + ' ' + rockFactLines[0].slice(2).replace(/`/g, '\'');
 			}
-			var postString = JSON.stringify(postData);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(postString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for " + target);
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(postString);
-		} catch (e) {
+			var srcActivity = rockFact ? 'Random fact!' : 'Dad Joke!';
+			writeToDiscord(postData, srcActivity);
+	}
+	 catch (e) {
 		  console.error(e.message);
 		}
-	});
+	  });
 	});
 	//Using request method for the get too, so calling end() here too.
 	contentReq.end();
@@ -378,7 +295,7 @@ function selectDate(num, mode) {
 		break;
 		
 		case 'spirit':
-		startDate = new Date(2004,0,4); //per NASA spec, must be after 1995-06-16, the first day APOD was posted
+		startDate = new Date(2004,0,4);
 		endDate = new Date(2011,4,25);
 		base_msec = startDate.getTime();
 		modifier = endDate - startDate;
@@ -387,7 +304,7 @@ function selectDate(num, mode) {
 		break;
 		
 		case 'opportunity':
-		startDate = new Date(2004,0,25); //per NASA spec, must be after 1995-06-16, the first day APOD was posted
+		startDate = new Date(2004,0,25);
 		endDate = new Date(2019,1,13);
 		base_msec = startDate.getTime();
 		modifier = endDate - startDate;
@@ -396,7 +313,7 @@ function selectDate(num, mode) {
 		break;
 		
 		case 'curiosity':
-		startDate = new Date(2012,7,6); //per NASA spec, must be after 1995-06-16, the first day APOD was posted
+		startDate = new Date(2012,7,6);
 		endDate = new Date();
 		base_msec = startDate.getTime();
 		modifier = endDate - startDate;
@@ -404,6 +321,7 @@ function selectDate(num, mode) {
 		finalDate =  new Date(random_msec).toISOString().slice(0,10);
 		break;
 	}
+	console.log(`${mode} date being returned: ${finalDate}`);
 	return finalDate;
 }
 
@@ -497,39 +415,7 @@ function ChuckNorris() {
 			//console.log("My Content\r\n" + parsedData);
 			var postData = new Object();
 			postData.content = myConsts.GREG + ' ' + parsedData.value;
-			var postString = JSON.stringify(postData);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(postString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for Chuck Norris.");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(postString);
+			writeToDiscord(postData, 'Chuck Norris!!!');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -569,39 +455,7 @@ function DogFact() {
 			//console.log("My Content\r\n" + parsedData);
 			var postData = new Object();
 			postData.content = myConsts.GREG + ' ' + parsedData.facts[0];
-			var postString = JSON.stringify(postData);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(postString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for Dog Facts.");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(postString);
+			writeToDiscord(postData, 'Dog fact!!!');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -641,39 +495,7 @@ function CatFact() {
 			//console.log("My Content\r\n" + parsedData);
 			var postData = new Object();
 			postData.content = myConsts.GREG + ' ' + parsedData.fact;
-			var postString = JSON.stringify(postData);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(postString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for Cat Facts.");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(postString);
+			writeToDiscord(postData, 'Cat fact!');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -714,39 +536,7 @@ function JeopardyQ() {
 			var postData = new Object();
 			var textOut = parsedData[0].value != null ? myConsts.GREG + "\r\n" + parsedData[0].category.title + " for $" + parsedData[0].value + "\r\nQ: " + parsedData[0].question + '\r\n\r\nA: ||' + parsedData[0].answer.replace("<i>", "*").replace("</i>", "*") + '||' : "<@540850957131579413>\r\n" + parsedData[0].category.title + "\r\nQ: " + parsedData[0].question + '\r\n\r\nA: ||' + parsedData[0].answer.replace("<i>", "*").replace("</i>", "*") + '||';
 			postData.content = textOut;
-			var postString = JSON.stringify(postData);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(postString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for Jeopardy.");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(postString);
+			writeToDiscord(postData, 'Trivia!');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -786,39 +576,7 @@ function ThisOrThat() {
 			//console.log("My Content\r\n" + parsedData);
 			var postData = new Object();
 			postData.content = `${myConsts.GREG} ${parsedData.this} or ${parsedData.that}?`;
-			var postString = JSON.stringify(postData);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(postString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for This Or That.");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(postString);
+			writeToDiscord(postData, 'This or That!');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -859,39 +617,7 @@ function Affirm() {
 			//console.log("My Content\r\n" + parsedData);
 			var postData = new Object();
 			postData.content = myConsts.GREG + ' ' + parsedData.affirmation;
-			var postString = JSON.stringify(postData);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(postString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for Affirmations.");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(postString);
+			writeToDiscord(postData, 'Affirmations!');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -931,39 +657,7 @@ function AdviceSlip() {
 			//console.log("My Content\r\n" + parsedData);
 			var postData = new Object();
 			postData.content = myConsts.GREG + ' ' + parsedData.slip.advice;
-			var postString = JSON.stringify(postData);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(postString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for Advice Slip.");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(postString);
+			writeToDiscord(postData, 'Advice');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -1023,40 +717,7 @@ function NasaAPOD(apodDate, num) {
 			myRoot.content = myConsts.GREG + '\r\n';
 			myRoot.embeds = new Array();
 			myRoot.embeds.push(myEmbed);
-			var embedString = JSON.stringify(myRoot);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(embedString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for the NASA APOD");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(embedString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(embedString);
-		  console.log("Using date: " + apodDate.toString());
+			writeToDiscord(myRoot, `Nasa APOD (${apodDate})`);
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -1073,9 +734,10 @@ function NasaMRover(num) {
 	const rovers = ['curiosity','opportunity','spirit'];
 	
 	var selectRover = rovers[num % rovers.length];
+	var selectedDate = selectDate(num, selectRover);
 	const contentOptions = {
 			hostname: 'api.nasa.gov',
-			path: `/mars-photos/api/v1/rovers/${selectRover}/photos/?earth_date=${selectDate(num, selectRover)}&api_key=${myConsts.NASA}`,
+			path: `/mars-photos/api/v1/rovers/${selectRover}/photos/?earth_date=${selectedDate}&api_key=${myConsts.NASA}`,
 			method: 'GET',
 			headers: {
 			  'Accept': 'application/json',
@@ -1122,39 +784,7 @@ function NasaMRover(num) {
 				myRoot.content = myConsts.GREG + '\r\n';
 				myRoot.embeds = new Array();
 				myRoot.embeds.push(myEmbed);
-				var embedString = JSON.stringify(myRoot);
-			  const discordOptions = {
-				hostname: 'discord.com',
-				path: `/api/webhooks/${myConsts.PL_botspam}`,
-				method: 'POST',
-				headers: {
-				  'Content-Type': 'application/json',
-				  'Content-Length': Buffer.byteLength(embedString)
-				}
-			  };
-
-			  const discordReq = https.request(discordOptions, (res) => {
-				console.log(`STATUS: ${res.statusCode}`);
-				//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-				res.setEncoding('utf8');
-
-				res.on('data', (chunk) => {
-				  //console.log(`BODY: ${chunk}`);
-				});
-				res.on('end', () => {
-				  console.log('No more data in response.' + "\r\nThis is for the NASA Mars Rovers");
-				});
-			  });
-
-			  discordReq.on('error', (e) => {
-				console.error(`problem with request: ${e.message}`);
-			  });
-
-			  // Write data to request body
-			  discordReq.write(embedString);
-			  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-			  discordReq.end();
-			  console.log(embedString);
+				writeToDiscord(myRoot, `Nasa Mars Rover (${selectedDate})`);
 			}
 			else
 			{
@@ -1238,39 +868,7 @@ function Pokemon(num) {
 			myRoot.content = `${myConsts.GREG} Random Pokémon!\r\n`;
 			myRoot.embeds = new Array();
 			myRoot.embeds.push(myEmbed);
-			var embedString = JSON.stringify(myRoot);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(embedString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is Pokemon");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(embedString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(embedString);
+			writeToDiscord(myRoot, 'Random Pokémon');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -1333,39 +931,7 @@ function Unsplash(num) {
 			myRoot.content = `${myConsts.GREG} Random Photo!\r\n`;
 			myRoot.embeds = new Array();
 			myRoot.embeds.push(myEmbed);
-			var embedString = JSON.stringify(myRoot);
-		  const discordOptions = {
-			hostname: 'discord.com',
-			path: `/api/webhooks/${myConsts.PL_botspam}`,
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'Content-Length': Buffer.byteLength(embedString)
-			}
-		  };
-
-		  const discordReq = https.request(discordOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-			  //console.log(`BODY: ${chunk}`);
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is Unsplash");
-			});
-		  });
-
-		  discordReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-
-		  // Write data to request body
-		  discordReq.write(embedString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  discordReq.end();
-		  console.log(embedString);
+			writeToDiscord(myRoot, 'Unsplash');
 		} catch (e) {
 		  console.error(e.message);
 		}
@@ -1382,6 +948,10 @@ var val = Math.round(MersenneTwister.random() * Number.MAX_SAFE_INTEGER);
 var task = -1;
 if (process.argv.length == 3)
 	task = process.argv[2];
+else if (process.argv.length == 4) {
+	task = process.argv[2];
+	val = parseInt(process.argv[3])
+}
 else
 	task = val;
 console.log(`Main value: ${val}\r\nTask value: ${task}`);
