@@ -5,6 +5,7 @@ const myConsts = require('./myConstants.js');
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
+//const qs = require('querystring');
 const pool = mariadb.createPool({
      host: myConsts.conn.host, 
      user: myConsts.conn.user, 
@@ -29,8 +30,8 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'guess <number>', value: `Guess a positive integer between 0 and ${myConsts.GUESS_MAX}!`, inline: true },
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
-		{ name: 'time', value: 'Returns current time (relative to bot\'s local time) in multiple time zones.', inline: true }
-		
+		{ name: 'time', value: 'Returns current time (relative to bot\'s local time) in multiple time zones.', inline: true },
+		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nUse the | character to separate first and second lines of text.', inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -454,6 +455,85 @@ function getTweetPromise(account) {
 	});
 }
 
+function genImgFlip(memeText) {
+	var num = Math.random();
+	var myEmbed = new Object();
+	var myImage = new Object();
+	var selectedMeme  = '';
+	
+	const getOptions = {
+				hostname: 'api.imgflip.com',
+				path: '/get_memes',
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA
+				}
+	};
+	//console.log(getOptions.path);
+	//Perform GET request with specified options.
+	let allMemeData = '';
+	
+	return new Promise(function(myResolve, myReject) {
+		
+		try {
+		//let account = accounts[Math.floor(num * accounts.length)];
+			const getMemeReq = https.request(getOptions, (addr_res) => {
+				addr_res.on('data', (memeIn) => { allMemeData += memeIn; });
+					addr_res.on('end', () => {
+					var allMemeDataOut = JSON.parse(allMemeData);
+					if (allMemeDataOut.success)
+						selectedMeme = allMemeDataOut.data.memes[Math.round(allMemeDataOut.data.memes.length * num)];
+					var myText = memeText.split("|");
+					var imgFlipRequestStr = new URLSearchParams([['template_id', selectedMeme.id],['username', myConsts.imgFlip_usr],['password', myConsts.imgFlip_pwd],['text0', myText[0]], ['text1', myText[1]]]).toString();
+					
+					const genOptions = {
+						hostname: 'api.imgflip.com',
+						path: '/caption_image',
+						method: 'POST',
+						headers: {
+						  'User-Agent': myConsts.UA,
+						  'Content-Type' : 'application/x-www-form-urlencoded'
+						}
+					};
+					
+					var someData = '';
+					const genReq = https.request(genOptions, (res) => {
+							res.on('data', (chunk) => { someData += chunk; });
+							res.on('end', () => {
+								//console.log("LOOK HERE FOR DATA: " + someData);
+							var myMeme = JSON.parse(someData);
+							myEmbed.title = 'A generated meme!';
+							myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+							if (myMeme.success) {
+								myEmbed.url = myMeme.data.page_url;
+								myImage.url = myMeme.data.url;
+							}
+							myEmbed.image = myImage;
+							myResolve(myEmbed);
+						});
+						res.on('error', (err) => {
+							myConsts.logger(err);
+							myReject(err);
+						});
+					});
+					//console.log("This is what should be sent: " + imgFlipRequestStr);
+					genReq.write(imgFlipRequestStr);
+					genReq.end();
+				});
+				
+				addr_res.on('error', (err) => {
+					myConsts.logger(err);
+					myReject(err);
+				});
+			}).end();
+		}
+		catch (e) {
+			  myConsts.logger(e.message);
+			  myReject(e.message);
+			}
+	});
+}
+
 const prefixes = ['!','?'];
 
 function validatePrefix(p) {
@@ -587,6 +667,13 @@ client.on("messageCreate", async function(message) {
 		 else {
 		 	message.channel.send("Nope, can't guess with that!");
 		 }
+		  break;
+		  
+		  case 'meme':
+		  genImgFlip(baseArg).then(
+			  function(resp) { message.channel.send({embeds: [resp]}); },
+			  function(err) { message.channel.send(err); }
+			);
 		  break;
 			  
 		  case 'time':
