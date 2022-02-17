@@ -490,7 +490,6 @@ function genImgFlip(memeText) {
 							}
 							
 							var kvCollection = [['template_id', selectedMeme.id],['username', myConsts.imgFlip_usr],['password', myConsts.imgFlip_pwd]];
-							var boxes = new Array();
 							for (var i = 0; i < myText.length; i++)
 							{
 								// The imgflip API doc is horribly non-descript about this. The example shows the "boxes" parameter as JSON
