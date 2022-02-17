@@ -461,6 +461,7 @@ function genImgFlip(memeText) {
 	var myImage = new Object();
 	var selectedMeme  = '';
 	var myText = memeText.split("|");
+	var targetLength = 0;
 		const getOptions = {
 					hostname: 'api.imgflip.com',
 					path: '/get_memes',
@@ -484,18 +485,28 @@ function genImgFlip(memeText) {
 							var allMemeDataOut = JSON.parse(allMemeData);
 							if (allMemeDataOut.success)
 							{
-								var filteredMemes = allMemeDataOut.data.memes.filter(m => m.box_count == myText.length);
+								targetLength = myText.length >= 3 ? myText.length : 2;
+								var filteredMemes = allMemeDataOut.data.memes.filter(m => m.box_count == targetLength);
 								selectedMeme = filteredMemes[Math.round(filteredMemes.length * num)];
 								//console.log("Selected: " + selectedMeme.id);
 							}
 							
 							var kvCollection = [['template_id', selectedMeme.id],['username', myConsts.imgFlip_usr],['password', myConsts.imgFlip_pwd]];
-							for (var i = 0; i < myText.length; i++)
+							
+							//Because Greg likes undefined things!
+							if (targetLength <= 2)
 							{
-								// The imgflip API doc is horribly non-descript about this. The example shows the "boxes" parameter as JSON
-								// but since this request format is form-urlencoded, what it actually means is that it wants each boxes "element"
-								//represented as an array entry with an associative key for each 'property' being used. Only using 'text' in my case.
-								kvCollection.push([`boxes[${i}][text]`, myText[i]]);
+								kvCollection.push(['text0', myText[0]],['text1', myText[1]]);
+							}
+							else
+							{
+								for (var i = 0; i < targetLength; i++)
+								{
+									// The imgflip API doc is horribly non-descript about this. The example shows the "boxes" parameter as JSON
+									// but since this request format is form-urlencoded, what it actually means is that it wants each boxes "element"
+									//represented as an array entry with an associative key for each 'property' being used. Only using 'text' in my case.
+									kvCollection.push([`boxes[${i}][text]`, myText[i]]);
+								}
 							}
 							var imgFlipRequestStr = new URLSearchParams(kvCollection).toString();
 							
@@ -542,7 +553,7 @@ function genImgFlip(memeText) {
 				}
 				else
 				{
-					myReject("Maximum number of boxes is 5!");
+					myReject("Maximum allowed text boxes is 5!");
 				}
 			}
 			catch (e)
