@@ -31,7 +31,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
 		{ name: 'time', value: 'Returns current time (relative to bot\'s local time) in multiple time zones.', inline: true },
-		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nUse the | character to separate first and second lines of text.', inline: true }
+		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nUse the | character to separate text (max 5 boxes).', inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -460,79 +460,100 @@ function genImgFlip(memeText) {
 	var myEmbed = new Object();
 	var myImage = new Object();
 	var selectedMeme  = '';
-	
-	const getOptions = {
-				hostname: 'api.imgflip.com',
-				path: '/get_memes',
-				method: 'GET',
-				headers: {
-				  'User-Agent': myConsts.UA
-				}
-	};
-	//console.log(getOptions.path);
-	//Perform GET request with specified options.
-	let allMemeData = '';
-	
-	return new Promise(function(myResolve, myReject) {
+	var myText = memeText.split("|");
+		const getOptions = {
+					hostname: 'api.imgflip.com',
+					path: '/get_memes',
+					method: 'GET',
+					headers: {
+					  'User-Agent': myConsts.UA
+					}
+		};
+		//console.log(getOptions.path);
+		//Perform GET request with specified options.
+		let allMemeData = '';
 		
-		try {
-		//let account = accounts[Math.floor(num * accounts.length)];
-			const getMemeReq = https.request(getOptions, (addr_res) => {
-				addr_res.on('data', (memeIn) => { allMemeData += memeIn; });
-					addr_res.on('end', () => {
-					var allMemeDataOut = JSON.parse(allMemeData);
-					if (allMemeDataOut.success)
-						selectedMeme = allMemeDataOut.data.memes[Math.round(allMemeDataOut.data.memes.length * num)];
-					var myText = memeText.split("|");
-					var imgFlipRequestStr = new URLSearchParams([['template_id', selectedMeme.id],['username', myConsts.imgFlip_usr],['password', myConsts.imgFlip_pwd],['text0', myText[0]], ['text1', myText[1]]]).toString();
-					
-					const genOptions = {
-						hostname: 'api.imgflip.com',
-						path: '/caption_image',
-						method: 'POST',
-						headers: {
-						  'User-Agent': myConsts.UA,
-						  'Content-Type' : 'application/x-www-form-urlencoded'
-						}
-					};
-					
-					var someData = '';
-					const genReq = https.request(genOptions, (res) => {
-							res.on('data', (chunk) => { someData += chunk; });
-							res.on('end', () => {
-								//console.log("LOOK HERE FOR DATA: " + someData);
-							var myMeme = JSON.parse(someData);
-							myEmbed.title = 'A generated meme!';
-							myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
-							if (myMeme.success) {
-								myEmbed.url = myMeme.data.page_url;
-								myImage.url = myMeme.data.url;
+		return new Promise(function(myResolve, myReject) {
+			
+			try {
+				if (myText.length <= 5)
+				{
+					const getMemeReq = https.request(getOptions, (addr_res) => {
+						addr_res.on('data', (memeIn) => { allMemeData += memeIn; });
+							addr_res.on('end', () => {
+							var allMemeDataOut = JSON.parse(allMemeData);
+							if (allMemeDataOut.success)
+							{
+								var filteredMemes = allMemeDataOut.data.memes.filter(m => m.box_count == myText.length);
+								selectedMeme = filteredMemes[Math.round(filteredMemes.length * num)];
+								//console.log("Selected: " + selectedMeme.id);
 							}
-							myEmbed.image = myImage;
-							myResolve(myEmbed);
+							
+							var kvCollection = [['template_id', selectedMeme.id],['username', myConsts.imgFlip_usr],['password', myConsts.imgFlip_pwd]];
+							var boxes = new Array();
+							for (var i = 0; i < myText.length; i++)
+							{
+								// The imgflip API doc is horribly non-descript about this. The example shows the "boxes" parameter as JSON
+								// but since this request format is form-urlencoded, what it actually means is that it wants each boxes "element"
+								//represented as an array entry with an associative key for each 'property' being used. Only using 'text' in my case.
+								kvCollection.push([`boxes[${i}][text]`, myText[i]]);
+							}
+							var imgFlipRequestStr = new URLSearchParams(kvCollection).toString();
+							
+							const genOptions = {
+								hostname: 'api.imgflip.com',
+								path: '/caption_image',
+								method: 'POST',
+								headers: {
+								  'User-Agent': myConsts.UA,
+								  'Content-Type' : 'application/x-www-form-urlencoded'
+								}
+							};
+							
+							var someData = '';
+							const genReq = https.request(genOptions, (res) => {
+									res.on('data', (chunk) => { someData += chunk; });
+									res.on('end', () => {
+										//console.log("LOOK HERE FOR DATA: " + someData);
+									var myMeme = JSON.parse(someData);
+									myEmbed.title = 'A generated meme!';
+									myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+									if (myMeme.success) {
+										myEmbed.url = myMeme.data.page_url;
+										myImage.url = myMeme.data.url;
+									}
+									myEmbed.image = myImage;
+									myResolve(myEmbed);
+								});
+								res.on('error', (err) => {
+									myConsts.logger(err);
+									myReject(err);
+								});
+							});
+							//console.log("This is what should be sent: " + imgFlipRequestStr);
+							genReq.write(imgFlipRequestStr);
+							genReq.end();
 						});
-						res.on('error', (err) => {
+						
+						addr_res.on('error', (err) => {
 							myConsts.logger(err);
 							myReject(err);
 						});
-					});
-					//console.log("This is what should be sent: " + imgFlipRequestStr);
-					genReq.write(imgFlipRequestStr);
-					genReq.end();
-				});
-				
-				addr_res.on('error', (err) => {
-					myConsts.logger(err);
-					myReject(err);
-				});
-			}).end();
-		}
-		catch (e) {
-			  myConsts.logger(e.message);
-			  myReject(e.message);
+					}).end();
+				}
+				else
+				{
+					myReject("Maximum number of boxes is 5!");
+				}
 			}
-	});
-}
+			catch (e)
+			{
+				myConsts.logger(e.message);
+				myReject(e.message);
+			}
+		})
+	}
+
 
 const prefixes = ['!','?'];
 
