@@ -636,7 +636,7 @@ client.on("messageCreate", async function(message) {
 		  if (arg1.toLowerCase() == 'key' || arg1.toLowerCase() == 'prompt' || arg1.toLowerCase() == 'answer')
 		  {
 			  var msgTxt = await postPrompt(arg2, arg1.toLowerCase());
-			  message.channel.send(`I added the prompt with ID ${msgTxt}.`);
+			  message.channel.send(`I added the ${arg1} with ID ${msgTxt}.`);
 		  }
 		  break;
 		  
@@ -746,6 +746,7 @@ client.on("messageCreate", async function(message) {
 			  
 		  case 'brad':
 			  message.channel.send('ABAP - All Brads are :pig:');
+			  //message.channel.send('ABABAMFS - All Brads are  :sunglasses:');
 			  break;
 		  
 		  default:
