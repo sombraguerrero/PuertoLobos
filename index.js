@@ -22,7 +22,7 @@ const helpEmbed = new MessageEmbed()
 	.addFields(
 		{ name: 'pull <prompt, answer, key>', value: 'Pulls random writer\'s prompt, 8ball answer, or Great Silence response from database.', inline: true },
 		{ name: '8ball', value: 'Answers binary questions.', inline: true },
-		{ name: 'push <prompt, answer, key>', value: 'Adds random writer\'s prompt, 8ball answer, or Great Silence response to database. Returns insert ID', inline: true },
+		{ name: 'push <prompt, answer, greg>', value: 'Adds random writer\'s prompt, 8ball answer, or Great Silence response to database. Returns insert ID', inline: true },
 		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
 		{ name: 'sean, daniel, finn, comfort, chris', value: 'Responds with a random Tweet from the daily character accounts.', inline: true },
 		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
@@ -44,8 +44,9 @@ async function postPrompt(msg, kind) {
   let conn;
   var promptResult;
   try {
+	  var val = kind === 'greg' ? 'gregResponse' : kind;
 	conn = await pool.getConnection();
-	const res = await conn.query("INSERT INTO prompts (prompt, kind) values (?,?)", [msg, kind]);
+	const res = await conn.query("INSERT INTO prompts (prompt, kind) values (?,?)", [msg, val]);
 	promptResult = res.insertId;
 	console.log(res);
   } catch (err) {
@@ -633,7 +634,7 @@ client.on("messageCreate", async function(message) {
 		  arg2Start = baseArg != null ? baseArg.indexOf(' ') : null;
 		  arg1 = baseArg.slice(0, arg2Start)
 		  arg2 = baseArg.slice(arg2Start + 1);
-		  if (arg1.toLowerCase() == 'key' || arg1.toLowerCase() == 'prompt' || arg1.toLowerCase() == 'answer')
+		  if (arg1.toLowerCase() == 'greg' || arg1.toLowerCase() == 'prompt' || arg1.toLowerCase() == 'answer')
 		  {
 			  var msgTxt = await postPrompt(arg2, arg1.toLowerCase());
 			  message.channel.send(`I added the ${arg1} with ID ${msgTxt}.`);
