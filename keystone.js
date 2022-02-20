@@ -21,7 +21,7 @@ function getKeyResponse() {
 			 connectionLimit: myConsts.conn.connectionLimit
 		 })
 		.then(conn => {
-			conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', ['key'])
+			conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', ['gregResponse'])
 			.then(row => {
 				var survey = { "content": `${myConsts.GREG} ${row[0].prompt}` }
 				writeToDiscord(survey, 'Survey Response');
