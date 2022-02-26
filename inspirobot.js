@@ -86,7 +86,7 @@ function genImgFlip(num, textArray) {
 							//Because Greg likes undefined things!
 							if (targetLength <= 2)
 							{
-								kvCollection.push(['text0', textArray[0].text],['text1', textArray[1].text]);
+								kvCollection.push(['text0', textArray[0]],['text1', textArray[1]]);
 							}
 							else
 							{
@@ -95,7 +95,7 @@ function genImgFlip(num, textArray) {
 									// The imgflip API doc is horribly non-descript about this. The example shows the "boxes" parameter as JSON
 									// but since this request format is form-urlencoded, what it actually means is that it wants each boxes "element"
 									//represented as an array entry with an associative key for each 'property' being used. Only using 'text' in my case.
-									kvCollection.push([`boxes[${i}][text]`, textArray[i].text]);
+									kvCollection.push([`boxes[${i}][text]`, textArray[i]]);
 								}
 							}
 							var imgFlipRequestStr = new URLSearchParams(kvCollection).toString();
@@ -156,6 +156,7 @@ function genImgFlip(num, textArray) {
 	}
 
 function CallImgFlip(num) {
+	/***
 	const getOptions = {
 			hostname: 'my.api.mockaroo.com',
 			path: `/phrases.json?qty=${Math.floor(num * 3) + 2}`,
@@ -165,13 +166,46 @@ function CallImgFlip(num) {
 			  'x-api-key': myConsts.MOCKAROO
 			}
 		  };
-
-	//Perform GET request with specified options.
+	**/
+	var someLength = Math.floor(num * 3) + 2;
+	var someYear = Math.round(num * 2021);
+	var period = '';
+	if (someYear >= 1500)
+	{
+		period = someYear;
+	}
+	else {
+		if (someYear > 1399 && someYear <= 1499)
+			period = '15th%20century';
+		else if (someYear > 1299 && someYear <= 1399)
+			period = '14th%20century';
+		else if (someYear > 1199 && someYear <= 1299)
+			period = '13th%20century';
+		else if (someYear > 1099 && someYear <= 1199)
+			period = '12th%20century';
+		else
+			period = 'before%2012th%20century';
+	}
+	console.log(period);
+	const getOptions = {
+			hostname: 'www.merriam-webster.com',
+			path: `/lapi/v1/mwol-search/ety-explorer/date/${period}`,
+			method: 'GET',
+			headers: {
+			  'User-Agent': myConsts.UA
+			}
+		  };
+		  
 	let textData = '';
 	https.request(getOptions, (textReq) => {
 		textReq.on('data', (textIn) => { textData += textIn; });
 			textReq.on('end', () => {
-				var boxText = JSON.parse(textData);
+				var boxTextSrc = JSON.parse(textData);
+				var boxText = new Array();
+				for (var x = 0; x < someLength; x++)
+				{
+					boxText.push(boxTextSrc.words[Math.floor(MersenneTwister.random() * boxTextSrc.total)].toUpperCase());
+				}
 				
 			const discordOptions = {
 				hostname: 'discord.com',
@@ -188,29 +222,6 @@ function CallImgFlip(num) {
 				);
 		});
 	}).end();
-}
-
-function pickLocal(num) {
-	// Navigate to and retrieve random file.
-	var basePath = "/var/services/web/webhooks/inspirobot_local/";
-	fs.readdir(basePath, (err, files) => {
-		try {
-			//files.sort();
-			var selectedImg = files[Math.floor(num * files.length)];
-			//Perform post to Discord
-			var formData = new FormData();
-			formData.append('content', 'InspiroBot once said...');
-			formData.append('file', fs.createReadStream(basePath + selectedImg), { filename: selectedImg});
-			formData.submit(`https://discord.com/api/webhooks/${myConsts.DND}`, (err, res) => {
-				var myLog = fs.createWriteStream('log.txt');
-				myLog.write("Response code: " + res.statusCode + "\r\n" + err);
-			});
-		}
-		catch(err) {
-			var errLog = fs.createWriteStream('error.log');
-			errLog.write(err.name + ": " + err.message + "\r\n");
-		}
-	});
 }
 
 function GetTweet(num) {
@@ -286,6 +297,8 @@ function GetTweet(num) {
 		});
 	}).end();	
 }
+
+
 var val = MersenneTwister.random();
 if (process.argv.length == 3 && process.argv[2].toLowerCase() == "tweet")
 	GetTweet(val);
@@ -294,3 +307,4 @@ else if (Math.round(val) < 1)
 else
 	pickRemote(val);
 
+//CallImgFlip(val);
