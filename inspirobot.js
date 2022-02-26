@@ -48,6 +48,148 @@ function pickRemote(num) {
 	}).end();
 }
 
+function genImgFlip(num, textArray) {
+	var myEmbed = new Object();
+	var myImage = new Object();
+	var selectedMeme  = '';
+		const getOptions = {
+					hostname: 'api.imgflip.com',
+					path: '/get_memes',
+					method: 'GET',
+					headers: {
+					  'User-Agent': myConsts.UA
+					}
+		};
+		//console.log(getOptions.path);
+		//Perform GET request with specified options.
+		let allMemeData = '';
+		
+		return new Promise(function(myResolve, myReject) {
+			
+			try {
+				if (textArray.length <= 5)
+				{
+					const getMemeReq = https.request(getOptions, (addr_res) => {
+						addr_res.on('data', (memeIn) => { allMemeData += memeIn; });
+							addr_res.on('end', () => {
+							var allMemeDataOut = JSON.parse(allMemeData);
+							if (allMemeDataOut.success)
+							{
+								var targetLength = textArray.length >= 3 ? textArray.length : 2;
+								var filteredMemes = allMemeDataOut.data.memes.filter(m => m.box_count == targetLength);
+								selectedMeme = filteredMemes[Math.round(filteredMemes.length * num)];
+								//console.log("Selected: " + selectedMeme.id);
+							}
+							
+							var kvCollection = [['template_id', selectedMeme.id],['username', myConsts.imgFlip_usr],['password', myConsts.imgFlip_pwd]];
+							
+							//Because Greg likes undefined things!
+							if (targetLength <= 2)
+							{
+								kvCollection.push(['text0', textArray[0].text],['text1', textArray[1].text]);
+							}
+							else
+							{
+								for (var i = 0; i < targetLength; i++)
+								{
+									// The imgflip API doc is horribly non-descript about this. The example shows the "boxes" parameter as JSON
+									// but since this request format is form-urlencoded, what it actually means is that it wants each boxes "element"
+									//represented as an array entry with an associative key for each 'property' being used. Only using 'text' in my case.
+									kvCollection.push([`boxes[${i}][text]`, textArray[i].text]);
+								}
+							}
+							var imgFlipRequestStr = new URLSearchParams(kvCollection).toString();
+							
+							const genOptions = {
+								hostname: 'api.imgflip.com',
+								path: '/caption_image',
+								method: 'POST',
+								headers: {
+								  'User-Agent': myConsts.UA,
+								  'Content-Type' : 'application/x-www-form-urlencoded'
+								}
+							};
+							
+							var someData = '';
+							const genReq = https.request(genOptions, (res) => {
+									res.on('data', (chunk) => { someData += chunk; });
+									res.on('end', () => {
+										//console.log("LOOK HERE FOR DATA: " + someData);
+									var myMeme = JSON.parse(someData);
+									myEmbed.title = 'A generated meme!';
+									myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+									if (myMeme.success) {
+										myEmbed.url = myMeme.data.page_url;
+										myImage.url = myMeme.data.url;
+									}
+									myEmbed.image = myImage;
+									var myRoot = {"embeds" : [myEmbed]}
+									myResolve(JSON.stringify(myRoot));
+								});
+								res.on('error', (err) => {
+									myConsts.logger(err);
+									myReject(err);
+								});
+							});
+							//console.log("This is what should be sent: " + imgFlipRequestStr);
+							genReq.write(imgFlipRequestStr);
+							genReq.end();
+						});
+						
+						addr_res.on('error', (err) => {
+							myConsts.logger(err);
+							myReject(err);
+						});
+					}).end();
+				}
+				else
+				{
+					myReject("Maximum allowed text boxes is 5!");
+				}
+			}
+			catch (e)
+			{
+				myConsts.logger(e.message);
+				myReject(e.message);
+			}
+		})
+	}
+
+function CallImgFlip(num) {
+	const getOptions = {
+			hostname: 'my.api.mockaroo.com',
+			path: `/phrases.json?qty=${Math.floor(num * 3) + 2}`,
+			method: 'GET',
+			headers: {
+			  'User-Agent': myConsts.UA,
+			  'x-api-key': myConsts.MOCKAROO
+			}
+		  };
+
+	//Perform GET request with specified options.
+	let textData = '';
+	https.request(getOptions, (textReq) => {
+		textReq.on('data', (textIn) => { textData += textIn; });
+			textReq.on('end', () => {
+				var boxText = JSON.parse(textData);
+				
+			const discordOptions = {
+				hostname: 'discord.com',
+				path: `/api/webhooks/${myConsts.DND}`,
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			}
+			const discordReq = https.request(discordOptions);
+			genImgFlip(num, boxText).then(
+					function(resp) { discordReq.write(resp); discordReq.end(); console.log(resp); },
+					function(err) { myConsts.logger(err); console.log(err); discordReq.end(); }
+				);
+		});
+	}).end();
+}
+
 function pickLocal(num) {
 	// Navigate to and retrieve random file.
 	var basePath = "/var/services/web/webhooks/inspirobot_local/";
@@ -147,16 +289,8 @@ function GetTweet(num) {
 var val = MersenneTwister.random();
 if (process.argv.length == 3 && process.argv[2].toLowerCase() == "tweet")
 	GetTweet(val);
+else if (Math.round(val) < 1)
+	CallImgFlip(val);
 else
 	pickRemote(val);
-/***
-var decision = MersenneTwister.random();
-pickLocal(decision);
-if (Math.floor(decision * 10) % 2 == 1) {
-	pickLocal(decision);
-}
-else {
-	pickRemote();
-}
-***/
 
