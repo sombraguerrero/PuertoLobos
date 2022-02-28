@@ -943,6 +943,163 @@ function Unsplash(num) {
 	  console.error(`Got error: ${e.message}`);
 	});
 }
+
+function genImgFlip(num, textArray) {
+	var myEmbed = new Object();
+	var myImage = new Object();
+	var selectedMeme  = '';
+		const getOptions = {
+					hostname: 'api.imgflip.com',
+					path: '/get_memes',
+					method: 'GET',
+					headers: {
+					  'User-Agent': myConsts.UA
+					}
+		};
+		//console.log(getOptions.path);
+		//Perform GET request with specified options.
+		let allMemeData = '';
+		
+		return new Promise(function(myResolve, myReject) {
+			
+			try {
+				if (textArray.length <= 5)
+				{
+					const getMemeReq = https.request(getOptions, (addr_res) => {
+						addr_res.on('data', (memeIn) => { allMemeData += memeIn; });
+							addr_res.on('end', () => {
+							var allMemeDataOut = JSON.parse(allMemeData);
+							if (allMemeDataOut.success)
+							{
+								var targetLength = textArray.length >= 3 ? textArray.length : 2;
+								var filteredMemes = allMemeDataOut.data.memes.filter(m => m.box_count == targetLength);
+								selectedMeme = filteredMemes[num % filteredMemes.length];
+								//console.log("Selected: " + selectedMeme.id);
+							}
+							
+							var kvCollection = [['template_id', selectedMeme.id],['username', myConsts.imgFlip_usr],['password', myConsts.imgFlip_pwd]];
+							
+							//Because Greg likes undefined things!
+							if (targetLength <= 2)
+							{
+								kvCollection.push(['text0', textArray[0]],['text1', textArray[1]]);
+							}
+							else
+							{
+								for (var i = 0; i < targetLength; i++)
+								{
+									// The imgflip API doc is horribly non-descript about this. The example shows the "boxes" parameter as JSON
+									// but since this request format is form-urlencoded, what it actually means is that it wants each boxes "element"
+									//represented as an array entry with an associative key for each 'property' being used. Only using 'text' in my case.
+									kvCollection.push([`boxes[${i}][text]`, textArray[i]]);
+								}
+							}
+							var imgFlipRequestStr = new URLSearchParams(kvCollection).toString();
+							
+							const genOptions = {
+								hostname: 'api.imgflip.com',
+								path: '/caption_image',
+								method: 'POST',
+								headers: {
+								  'User-Agent': myConsts.UA,
+								  'Content-Type' : 'application/x-www-form-urlencoded'
+								}
+							};
+							
+							var someData = '';
+							const genReq = https.request(genOptions, (res) => {
+									res.on('data', (chunk) => { someData += chunk; });
+									res.on('end', () => {
+										//console.log("LOOK HERE FOR DATA: " + someData);
+									var myMeme = JSON.parse(someData);
+									myEmbed.title = 'A generated meme!';
+									myEmbed.color = Math.floor(num % 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+									if (myMeme.success) {
+										myEmbed.url = myMeme.data.page_url;
+										myImage.url = myMeme.data.url;
+									}
+									myEmbed.image = myImage;
+									var myRoot = {"embeds" : [myEmbed]}
+									myResolve(myRoot);
+								});
+								res.on('error', (err) => {
+									myConsts.logger(err);
+									myReject(err);
+								});
+							});
+							//console.log("This is what should be sent: " + imgFlipRequestStr);
+							genReq.write(imgFlipRequestStr);
+							genReq.end();
+						});
+						
+						addr_res.on('error', (err) => {
+							myConsts.logger(err);
+							myReject(err);
+						});
+					}).end();
+				}
+				else
+				{
+					myReject("Maximum allowed text boxes is 5!");
+				}
+			}
+			catch (e)
+			{
+				myConsts.logger(e.message);
+				myReject(e.message);
+			}
+		})
+	}
+
+function CallImgFlip(num) {
+	var someLength = Math.floor(num % 3) + 2;
+	var someYear = Math.round(num % 2021);
+	var period = '';
+	if (someYear >= 1500)
+	{
+		period = someYear;
+	}
+	else {
+		if (someYear > 1399 && someYear <= 1499)
+			period = '15th%20century';
+		else if (someYear > 1299 && someYear <= 1399)
+			period = '14th%20century';
+		else if (someYear > 1199 && someYear <= 1299)
+			period = '13th%20century';
+		else if (someYear > 1099 && someYear <= 1199)
+			period = '12th%20century';
+		else
+			period = 'before%2012th%20century';
+	}
+	console.log(period);
+	const getOptions = {
+			hostname: 'www.merriam-webster.com',
+			path: `/lapi/v1/mwol-search/ety-explorer/date/${period}`,
+			method: 'GET',
+			headers: {
+			  'User-Agent': myConsts.UA
+			}
+		  };
+		  
+	let textData = '';
+	https.request(getOptions, (textReq) => {
+		textReq.on('data', (textIn) => { textData += textIn; });
+			textReq.on('end', () => {
+				var boxTextSrc = JSON.parse(textData);
+				var boxText = new Array();
+				for (var x = 0; x < someLength; x++)
+				{
+					boxText.push(boxTextSrc.words[Math.floor(MersenneTwister.random() * boxTextSrc.total)].toUpperCase());
+				}
+				
+			genImgFlip(num, boxText).then(
+					function(resp) { writeToDiscord(resp, 'ImgFlip'); console.log(resp); },
+					function(err) { myConsts.logger(err); console.log(err); }
+				);
+		});
+	}).end();
+}
+
 //var mt = new MersenneTwister(srand());
 var val = Math.round(MersenneTwister.random() * Number.MAX_SAFE_INTEGER);
 var task = -1;
@@ -955,7 +1112,7 @@ else if (process.argv.length == 4) {
 else
 	task = val;
 console.log(`Main value: ${val}\r\nTask value: ${task}`);
-switch (task % 19) {
+switch (task % 20) {
 //switch (debugVal) {
 	case 0:
 	console.log('Dad Joke selected.\n');
@@ -1051,6 +1208,11 @@ switch (task % 19) {
 	case 17:
 	console.log('Random Cat Fact selected.\n');
 	CatFact();
+	break;
+	
+	case 18:
+	console.log('ImgFlip selected.\n');
+	CallImgFlip(val);
 	break;
 	
 	default:
