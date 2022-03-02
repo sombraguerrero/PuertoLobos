@@ -116,7 +116,7 @@ function genImgFlip(num, textArray) {
 									res.on('end', () => {
 										//console.log("LOOK HERE FOR DATA: " + someData);
 									var myMeme = JSON.parse(someData);
-									myEmbed.title = 'A generated meme!';
+									myEmbed.title = selectedMeme.name;
 									myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
 									if (myMeme.success) {
 										myEmbed.url = myMeme.data.page_url;
