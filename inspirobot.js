@@ -299,6 +299,8 @@ function GetTweet(num) {
 }
 
 function Face(num) {
+	let now = new Date().getTime() / 1000.0;
+	let epoch = `${Math.floor(now)}.jpg`;
 	const getOptions = {
 			hostname: 'this-person-does-not-exist.com',
 			path: '/en?new',
@@ -313,38 +315,35 @@ function Face(num) {
 	https.request(getOptions, (addr_res) => {
 		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
 			addr_res.on('end', () => {
-			let faceData = JSON.parse(imgData);
-			if (faceData.generated) {
-				var myImage = new Object();
-				myImage.url = `https://this-person-does-not-exist.com/img/${faceData.name}`;
-				var myEmbed = new Object();
-				myEmbed.image = myImage;
-				myEmbed.title = "This person does not exist!";
-				myEmbed.color = num % 16777215; // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)  
-				var myRoot = new Object();
-				myRoot.embeds = new Array();
-				myRoot.embeds.push(myEmbed);
-				var embedString = JSON.stringify(myRoot);
-				console.log(embedString);
-				const DND_Options = {
-					hostname: 'discord.com',
-					path: `/api/webhooks/${myConsts.DND}`,
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'Content-Length': Buffer.byteLength(embedString)
-					}
+				let faceData = JSON.parse(imgData);
+				console.log(imgData);
+				if (faceData.generated) {
+					console.log("It has been generated!\r\n");
+					const filePath = fs.createWriteStream(`/var/services/web/webhooks/faces/${epoch}`);
+					const getFace = https.get(`https://this-person-does-not-exist.com/img/${faceData.name}`, function(response) {
+						response.pipe(filePath);
+					});
+					filePath.on('finish',() => {
+						filePath.close();
+						var formData = new FormData();
+						formData.append('content', 'This person does not exist!');
+						formData.append('file', fs.createReadStream(`/var/services/web/webhooks/faces/${epoch}`), { filename: epoch});
+						formData.submit(`https://discord.com/api/webhooks/${myConsts.DND}`);
+					});
 				}
-				const DND_Req = https.request(DND_Options);
-				DND_Req.write(embedString);
-				DND_Req.end();
-			}
-		});
+			});
 	}).end();
 }
 
-var val = MersenneTwister.random() * Number.MAX_SAFE_INTEGER;
-//var val = 1;
+function postFace(e) {
+	var formData = new FormData();
+	formData.append('content', 'This person does not exist!');
+	formData.append('file', fs.createReadStream(`/var/services/web/webhooks/faces/${e}`), { filename: e});
+	formData.submit(`https://discord.com/api/webhooks/${myConsts.DND}`);
+}
+
+//var val = MersenneTwister.random() * Number.MAX_SAFE_INTEGER;
+var val = 1;
 if (process.argv.length == 3 && process.argv[2].toLowerCase() == "tweet")
 	GetTweet(val);
 else switch (val % 3)

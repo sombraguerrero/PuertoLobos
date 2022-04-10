@@ -1,4 +1,4 @@
-const {Client, Intents, MessageEmbed} = require("discord.js");
+const {Client, Intents, MessageEmbed, MessageAttachment} = require("discord.js");
 const client = new Client({ intents: ["GUILDS", "GUILD_MESSAGES", "DIRECT_MESSAGES"] });
 const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
@@ -208,6 +208,8 @@ function inspiroPromise() {
 
 function facePromise() {
 	return new Promise(function(myResolve, myReject) {
+		let now = new Date().getTime() / 1000.0;
+		let epoch = `${Math.floor(now)}.jpg`;
 		const getOptions = {
 				hostname: 'this-person-does-not-exist.com',
 				path: '/en?new',
@@ -223,15 +225,16 @@ function facePromise() {
 			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
 				addr_res.on('end', () => {
 				let faceData = JSON.parse(imgData);
-				if (faceData.generated)
-				{
-					var myImage = new Object();
-					myImage.url = `https://this-person-does-not-exist.com/img/${faceData.name}`;
-					var myEmbed = new Object();
-					myEmbed.image = myImage;
-					myEmbed.title = "This person does not exist!";
-					myEmbed.color = Math.floor(Math.random() * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
-					myResolve(myEmbed);
+				if (faceData.generated) {
+					console.log("It has been generated!\r\n");
+					const filePath = fs.createWriteStream(`/var/services/web/webhooks/prompt-bot/faces/${epoch}`);
+					const getFace = https.get(`https://this-person-does-not-exist.com/img/${faceData.name}`, function(response) {
+						response.pipe(filePath);
+					});
+					filePath.on('finish',() => {
+						filePath.close();
+						myResolve(`/var/services/web/webhooks/prompt-bot/faces/${epoch}`);
+					});
 				}
 				else
 				{
@@ -882,7 +885,11 @@ client.on("messageCreate", async function(message) {
 		  
 		  case 'face':
 		  facePromise().then(
-			function(img) { message.channel.send({embeds: [img]}); },
+			function(img) {
+				var myImg = new MessageAttachment()
+					.setFile(img);
+				message.channel.send({content: 'This person does not exist!', files: [myImg]});
+			},
 			function(err) { message.channel.send(err); }
 		  );
 		  break;
