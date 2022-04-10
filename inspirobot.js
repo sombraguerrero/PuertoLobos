@@ -26,7 +26,7 @@ function pickRemote(num) {
 			var myEmbed = new Object();
 			myEmbed.image = myImage;
 			myEmbed.title = "InspiroBot says...";
-			myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)  
+			myEmbed.color = num % 16777215; // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)  
 			var myRoot = new Object();
 			myRoot.embeds = new Array();
 			myRoot.embeds.push(myEmbed);
@@ -117,7 +117,7 @@ function genImgFlip(num, textArray) {
 										//console.log("LOOK HERE FOR DATA: " + someData);
 									var myMeme = JSON.parse(someData);
 									myEmbed.title = selectedMeme.name;
-									myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+									myEmbed.color = num % 16777215; // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
 									if (myMeme.success) {
 										myEmbed.url = myMeme.data.page_url;
 										myImage.url = myMeme.data.url;
@@ -255,7 +255,7 @@ function GetTweet(num) {
 				myEmbed.image = myImage;
 			}
 			
-			myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+			myEmbed.color = num % 16777215; // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
 			myEmbed.title = "Daily InspiroBot";
 			
 			//Account for cases where either the URL ends the Tweet or is absent.
@@ -298,13 +298,65 @@ function GetTweet(num) {
 	}).end();	
 }
 
+function Face(num) {
+	const getOptions = {
+			hostname: 'this-person-does-not-exist.com',
+			path: '/en?new',
+			method: 'GET',
+			headers: {
+			  'User-Agent': myConsts.UA
+			}
+		  };
 
-var val = MersenneTwister.random();
+	//Perform GET request with specified options.
+	let imgData = '';
+	https.request(getOptions, (addr_res) => {
+		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+			addr_res.on('end', () => {
+			let faceData = JSON.parse(imgData);
+			if (faceData.generated) {
+				var myImage = new Object();
+				myImage.url = `https://this-person-does-not-exist.com/img/${faceData.name}`;
+				var myEmbed = new Object();
+				myEmbed.image = myImage;
+				myEmbed.title = "This person does not exist!";
+				myEmbed.color = num % 16777215; // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)  
+				var myRoot = new Object();
+				myRoot.embeds = new Array();
+				myRoot.embeds.push(myEmbed);
+				var embedString = JSON.stringify(myRoot);
+				console.log(embedString);
+				const DND_Options = {
+					hostname: 'discord.com',
+					path: `/api/webhooks/${myConsts.DND}`,
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'Content-Length': Buffer.byteLength(embedString)
+					}
+				}
+				const DND_Req = https.request(DND_Options);
+				DND_Req.write(embedString);
+				DND_Req.end();
+			}
+		});
+	}).end();
+}
+
+var val = MersenneTwister.random() * Number.MAX_SAFE_INTEGER;
+//var val = 1;
 if (process.argv.length == 3 && process.argv[2].toLowerCase() == "tweet")
 	GetTweet(val);
-else if (Math.round(val) < 1)
+else switch (val % 3)
+{
+	case 2:
 	CallImgFlip(val);
-else
+	break;
+	case 1:
+	Face(val);
+	break;
+	case 0:
+	default:
 	pickRemote(val);
-
+}
 //CallImgFlip(val);

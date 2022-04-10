@@ -32,7 +32,8 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
 		{ name: 'time', value: 'Returns current time (relative to bot\'s local time) in multiple time zones.', inline: true },
 		{ name: 'imgflip', value: 'Generates a single-image meme via ImgFlip.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
-		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true }
+		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
+		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -201,6 +202,51 @@ function inspiroPromise() {
 		inspiroReq.on('error', (err) => {
 			myConsts.logger(err);
 			myReject('InspiroBot doesn\'t seem to be in a sharing mood...');
+		});
+	});
+}
+
+function facePromise() {
+	return new Promise(function(myResolve, myReject) {
+		const getOptions = {
+				hostname: 'this-person-does-not-exist.com',
+				path: '/en?new',
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA
+				}
+			  };
+
+		//Perform GET request with specified options.
+		let imgData = '';
+		const inspiroReq = https.request(getOptions, (addr_res) => {
+			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+				addr_res.on('end', () => {
+				let faceData = JSON.parse(imgData);
+				if (faceData.generated)
+				{
+					var myImage = new Object();
+					myImage.url = `https://this-person-does-not-exist.com/img/${faceData.name}`;
+					var myEmbed = new Object();
+					myEmbed.image = myImage;
+					myEmbed.title = "This person does not exist!";
+					myEmbed.color = Math.floor(Math.random() * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
+					myResolve(myEmbed);
+				}
+				else
+				{
+					myReject('It seems I have no countenance available to bless you!');
+				}
+			});
+			addr_res.on('error', (err) => {
+				myConsts.logger(err);
+				myReject('It seems I have no countenance available to bless you!');
+			});
+		}).end();
+		
+		inspiroReq.on('error', (err) => {
+			myConsts.logger(err);
+			myReject('It seems I have no countenance available to bless you!');
 		});
 	});
 }
@@ -829,6 +875,13 @@ client.on("messageCreate", async function(message) {
 		  case 'inspiro':
 		  case 'inspirobot':
 		  inspiroPromise().then(
+			function(img) { message.channel.send({embeds: [img]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'face':
+		  facePromise().then(
 			function(img) { message.channel.send({embeds: [img]}); },
 			function(err) { message.channel.send(err); }
 		  );

@@ -153,6 +153,39 @@ function InspiroBot(num) {
 	}).end();
 }
 
+function Face(num) {
+	const getOptions = {
+			hostname: 'this-person-does-not-exist.com',
+			path: '/en?new',
+			method: 'GET',
+			headers: {
+			  'User-Agent': myConsts.UA
+			}
+		  };
+
+	//Perform GET request with specified options.
+	let imgData = '';
+	https.request(getOptions, (addr_res) => {
+		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+			addr_res.on('end', () => {
+			let faceData = JSON.parse(imgData);
+			if (faceData.generated) {
+				var myImage = new Object();
+				myImage.url = `https://this-person-does-not-exist.com/img/${faceData.name}`;
+				var myEmbed = new Object();
+				myEmbed.image = myImage;
+				myEmbed.title = "This person does not exist!";
+				myEmbed.color = Math.floor(num % 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)  
+				var myRoot = new Object();
+				myRoot.embeds = new Array();
+				myRoot.embeds.push(myEmbed);
+				myRoot.content = myConsts.GREG;
+				writeToDiscord(myRoot, 'This Person Does Not Exist');
+			}
+		});
+	}).end();
+}
+
 function CatAsService(num) {
 	const getOptions = {
 			hostname: 'api.thecatapi.com',
@@ -1112,7 +1145,7 @@ else if (process.argv.length == 4) {
 else
 	task = val;
 console.log(`Main value: ${val}\r\nTask value: ${task}`);
-switch (task % 20) {
+switch (task % 21) {
 //switch (debugVal) {
 	case 0:
 	console.log('Dad Joke selected.\n');
@@ -1213,6 +1246,11 @@ switch (task % 20) {
 	case 18:
 	console.log('ImgFlip selected.\n');
 	CallImgFlip(val);
+	break;
+	
+	case 19:
+	console.log('This person does not exist!');
+	Face(val);
 	break;
 	
 	default:
