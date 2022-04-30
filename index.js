@@ -1,4 +1,4 @@
-const {Client, Intents, MessageEmbed, MessageAttachment} = require("discord.js");
+const {Client, Intents, MessageEmbed} = require("discord.js");
 const client = new Client({ intents: ["GUILDS", "GUILD_MESSAGES", "DIRECT_MESSAGES"] });
 const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
@@ -31,7 +31,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
 		{ name: 'time', value: 'Returns current time (relative to bot\'s local time) in multiple time zones.', inline: true },
-		{ name: 'imgflip', value: 'Generates a single-image meme via ImgFlip.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
+		{ name: 'imgflip', value: 'Generates a single-image meme via ImgFlip using completely random text.', inline: true },
 		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
 		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true }
 	);
@@ -478,7 +478,7 @@ function getTweetPromise(account) {
 				birdMedia = birdData.includes.media;
 				myImage = new Object();
 				
-				if ((typeof selectedTweet.attachments) != "undefined")
+				if ((typeof selectedTweet.attachments) != "undefined" && selectedTweet.attachments != null)
 				{
 					var selectedAttachmentKeyIndex =  selectedTweet.attachments.media_keys.length > 1 ? Math.floor(num * selectedTweet.attachments.media_keys.length) : 0;
 					var selectedMediaIndex = birdMedia.findIndex(media => media.media_key == selectedTweet.attachments.media_keys[selectedAttachmentKeyIndex]);
@@ -605,12 +605,58 @@ async function genImgFlipDB(memeText, p, t)
 		});
 	}
 	
+	function CallImgFlip() {
+		num = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+		var boxText = new Array();
+		var someLength = Math.floor(num % 3) + 2;
+		var someYear = Math.round(num % 2021);
+		var period = '';
+		if (someYear >= 1500)
+		{
+			period = someYear;
+		}
+		else {
+			if (someYear > 1399 && someYear <= 1499)
+				period = '15th%20century';
+			else if (someYear > 1299 && someYear <= 1399)
+				period = '14th%20century';
+			else if (someYear > 1199 && someYear <= 1299)
+				period = '13th%20century';
+			else if (someYear > 1099 && someYear <= 1199)
+				period = '12th%20century';
+			else
+				period = 'before%2012th%20century';
+		}
+		console.log(period);
+		const getOptions = {
+				hostname: 'www.merriam-webster.com',
+				path: `/lapi/v1/mwol-search/ety-explorer/date/${period}`,
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA
+				}
+			  };
+			  
+		let textData = '';
+		return new Promise(function(myResolve) {
+			https.request(getOptions, (textReq) => {
+				textReq.on('data', (textIn) => { textData += textIn; });
+					textReq.on('end', () => {
+						var boxTextSrc = JSON.parse(textData);
+						for (var x = 0; x < someLength; x++)
+						{
+							boxText.push(boxTextSrc.words[Math.floor(Math.random() * boxTextSrc.total)].toUpperCase());
+						}
+						myResolve(boxText);
+				});
+			}).end();
+			});
+	}
 	function genImgFlip(memeText) {
 	var num = Math.random();
 	var myEmbed = new Object();
 	var myImage = new Object();
 	var selectedMeme  = '';
-	var myText = memeText.split("|");
 	var targetLength = 0;
 		const getOptions = {
 					hostname: 'api.imgflip.com',
@@ -627,7 +673,7 @@ async function genImgFlipDB(memeText, p, t)
 		return new Promise(function(myResolve, myReject) {
 			
 			try {
-				if (myText.length <= 5)
+				if (memeText.length <= 5)
 				{
 					const getMemeReq = https.request(getOptions, (addr_res) => {
 						addr_res.on('data', (memeIn) => { allMemeData += memeIn; });
@@ -635,7 +681,7 @@ async function genImgFlipDB(memeText, p, t)
 							var allMemeDataOut = JSON.parse(allMemeData);
 							if (allMemeDataOut.success)
 							{
-								targetLength = myText.length >= 3 ? myText.length : 2;
+								targetLength = memeText.length >= 3 ? memeText.length : 2;
 								var filteredMemes = allMemeDataOut.data.memes.filter(m => m.box_count == targetLength);
 								selectedMeme = filteredMemes[Math.round(filteredMemes.length * num)];
 								//console.log("Selected: " + selectedMeme.id);
@@ -646,7 +692,7 @@ async function genImgFlipDB(memeText, p, t)
 							//Because Greg likes undefined things!
 							if (targetLength <= 2)
 							{
-								kvCollection.push(['text0', myText[0]],['text1', myText[1]]);
+								kvCollection.push(['text0', memeText[0]],['text1', memeText[1]]);
 							}
 							else
 							{
@@ -655,7 +701,7 @@ async function genImgFlipDB(memeText, p, t)
 									// The imgflip API doc is horribly non-descript about this. The example shows the "boxes" parameter as JSON
 									// but since this request format is form-urlencoded, what it actually means is that it wants each boxes "element"
 									//represented as an array entry with an associative key for each 'property' being used. Only using 'text' in my case.
-									kvCollection.push([`boxes[${i}][text]`, myText[i]]);
+									kvCollection.push([`boxes[${i}][text]`, memeText[i]]);
 								}
 							}
 							var imgFlipRequestStr = new URLSearchParams(kvCollection).toString();
@@ -851,10 +897,16 @@ client.on("messageCreate", async function(message) {
 		  break;
 		  
 		  case 'imgflip':
-		  genImgFlip(baseArg).then(
-			  function(resp) { message.channel.send({embeds: [resp]}); },
-			  function(err) { message.channel.send(err); }
-			);
+		  CallImgFlip().then(
+			function(resp)
+			{
+				genImgFlip(resp).then(
+					function(resp2) { message.channel.send({embeds: [resp2]}); },
+					function(err) { message.channel.send(err); }
+				);
+				console.log(resp);
+			}
+		  );
 		  break;
 		  
 		  case 'meme':
@@ -885,11 +937,7 @@ client.on("messageCreate", async function(message) {
 		  
 		  case 'face':
 		  facePromise().then(
-			function(img) {
-				var myImg = new MessageAttachment()
-					.setFile(img);
-				message.channel.send({content: 'This person does not exist!', files: [myImg]});
-			},
+			function(img) { message.channel.send({content: 'This person does not exist!', files: [img]}); },
 			function(err) { message.channel.send(err); }
 		  );
 		  break;
