@@ -295,6 +295,39 @@ function dadJokesPromise() {
 	});
 }
 
+function svsPromise() {
+	return new Promise(function(myResolve, myReject) {
+		const getOptions = {
+				hostname: 'localhost',
+				port: 9843,
+				path: '/svs',
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA,
+				  'Accept': 'text/plain'
+				}
+			  };
+
+		//Perform GET request with specified options.
+		let svsData = '';
+		const svsReq = http.request(getOptions, (svsRes) => {
+			svsRes.on('data', (svs) => { svsData += svs; });
+				svsRes.on('end', () => {
+					myResolve(svsData);
+			});
+			svsRes.on('error', (err) => {
+				myConsts.logger(err);
+				myReject('Encryption failure!');
+			});
+		}).end();
+		
+		svsReq.on('error', (err) => {
+			myConsts.logger(err);
+			myReject('Encryption failure!');
+		});
+	});
+}
+
 function calcImperial(height) {
 	var inches = height / 2.54;
 	var feet = inches / 12;
@@ -403,6 +436,50 @@ async function getTimePromise() {
 	}	
 }
 
+//This function will return a single promise.
+//An array will be built via a loop to then pass to Promise.all
+//The resolution of Promise.all will build the embed
+function getTimePromise2(timeZone) {
+	var now = new Date().toISOString().split('.')[0]+'Z';
+	//console.log(now);
+	return new Promise(function(myResolve) {
+	
+	var getOptions = {
+				hostname: 'dev.virtualearth.net',
+				path: `/REST/v1/timezone/convert/?desttz=${timeZone}&includeDstRules=true&datetime=${now}&o=json&key=${myConsts.BING}`,
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA
+				}
+		}
+		
+		var timeReq = https.request(getOptions, (res) => {
+							var someData = '';
+							res.on('data', (chunk) => { someData += chunk; });
+							res.on('end', () => {
+								//console.log("LOOK HERE FOR DATA: " + someData);
+							var myTime = JSON.parse(someData);
+							var timeConverted = myTime.resourceSets[0].resources[0].timeZone.convertedTime.localTime;
+							var zoneName = myTime.resourceSets[0].resources[0].timeZone.ianaTimeZoneId;
+							//myResolve({"dispName":timeInfo.timeZoneDisplayName, "ctime":timeInfo.localTime});
+							myResolve({"dispName":zoneName, "ctime":timeConverted});
+						});
+						res.on('error', (err) => {
+							myConsts.logger(err);
+						});
+		}).end();
+	});
+}
+
+function BuildTimePromises() {
+	var myPromises = new Array();
+	return new Promise(function(passingTime) {
+		myConsts.myTZ.forEach(function(time) {
+			myPromises.push(getTimePromise2(time));
+		});
+		passingTime(myPromises);
+	});
+}
 function getTweetPromise(account) {
 	var num = Math.random();
 	var myEmbed = new Object();
@@ -921,10 +998,20 @@ client.on("messageCreate", async function(message) {
 		  break;
 			  
 		  case 'time':
-			  getTimePromise().then(
-				function(res) { message.channel.send({embeds: [res]}); },
-				function(err) { message.channel.send(err); }
-			  );
+		  var allTimes = new MessageEmbed()
+				.setTitle('The current time is:')
+				.setColor('#0099ff');
+			  BuildTimePromises().then(
+				function(times) {
+					Promise.all(times).then(
+						function (myTimes) {
+							//console.log(myTimes);
+							myTimes.forEach(function(time) {
+								allTimes.addField(time.dispName, time.ctime, true);
+							});
+							message.channel.send({embeds: [allTimes]});
+						});
+				});
 			  break;
 		  
 		  case 'inspiro':
@@ -949,14 +1036,13 @@ client.on("messageCreate", async function(message) {
 		  case 'guid':
 		  case 'uuid':
 			  message.author.send(uuidv4().toUpperCase());
-		  /*message.author.send(await getGuid());
-			uuidPromise().then(
-				function(guid) { message.author.send(guid); },
-				function(err) { message.channel.send(err); }
-		  );
-		  */
 		  break;
-		  
+		  case 'svs':
+			svsPromise().then(
+				function(resp) { message.author.send(resp); },
+				function(err) { message.author.send(err); }
+			);
+		  break;
 		  case 'dadjokes':
 		  dadJokesPromise().then(
 			function(jokes) { message.channel.send(jokes); },
