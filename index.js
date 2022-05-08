@@ -30,10 +30,11 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'guess <number>', value: `Guess a positive integer between 0 and ${myConsts.GUESS_MAX}!`, inline: true },
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
-		{ name: 'time', value: 'Returns current time (relative to bot\'s local time) in multiple time zones.', inline: true },
+		{ name: 'time', value: 'Converts the current UTC time to local time in multiple time zones.', inline: true },
 		{ name: 'imgflip', value: 'Generates a single-image meme via ImgFlip using completely random text.', inline: true },
 		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
-		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true }
+		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true },
+		{ name: 'bestie', value: 'Pulls a gif of Captain Spirit saying, \"So true, bestie!\"', inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -1049,16 +1050,18 @@ client.on("messageCreate", async function(message) {
 			function(err) { message.channel.send(err); }
 		  );
 		  break;
-			  
+		  
 		  case 'brad':
-			  message.channel.send('ABAP - All Brads are :pig:');
-			  //message.channel.send('ABABAMFS - All Brads are  :sunglasses:');
-			  break;
+		  message.channel.send('ABAP - All Brads are :pig:');
+		  //message.channel.send('ABABAMFS - All Brads are  :sunglasses:');
+		  break;
+		  
+		  case "bestie":
+		  message.channel.send({files: [fs.createReadStream('bestie.gif')]});
+		  break;
 		  
 		  default:
 		  return;
-		  //message.channel.send("It's for you guys, <@155149108183695360>, <@204255221017214977>!");
-		  break;
 	  }
 	}
 	catch(err)
