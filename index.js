@@ -1,4 +1,4 @@
-const {Client, Intents, MessageEmbed} = require("discord.js");
+const {Client, Intents, MessageEmbed, MessageAttachment} = require("discord.js");
 const client = new Client({ intents: ["GUILDS", "GUILD_MESSAGES", "DIRECT_MESSAGES"] });
 const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
@@ -211,6 +211,26 @@ function facePromise() {
 	return new Promise(function(myResolve, myReject) {
 		let now = new Date().getTime() / 1000.0;
 		let epoch = `${Math.floor(now)}.jpg`;
+		
+		/***
+		const getOptions = {
+			hostname: 'thispersondoesnotexist.com',
+			path: '/image',
+			method: 'GET',
+			headers: {
+			  'User-Agent': myConsts.UA
+			}
+		};
+		
+		const faceReq = https.request(getOptions, (res) => {
+		const filePath = fs.createWriteStream(`/var/services/web/webhooks/prompt-bot/faces/${epoch}`);
+		res.pipe(filePath);
+		filePath.on('finish',() => {
+			filePath.close();
+			myResolve(`/var/services/web/webhooks/prompt-bot/faces/${epoch}`);
+		});
+	}).end();
+	***/
 		const getOptions = {
 				hostname: 'this-person-does-not-exist.com',
 				path: '/en?new',
@@ -222,7 +242,7 @@ function facePromise() {
 
 		//Perform GET request with specified options.
 		let imgData = '';
-		const inspiroReq = https.request(getOptions, (addr_res) => {
+		const faceReq = https.request(getOptions, (addr_res) => {
 			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
 				addr_res.on('end', () => {
 				let faceData = JSON.parse(imgData);
@@ -248,7 +268,7 @@ function facePromise() {
 			});
 		}).end();
 		
-		inspiroReq.on('error', (err) => {
+		faceReq.on('error', (err) => {
 			myConsts.logger(err);
 			myReject('It seems I have no countenance available to bless you!');
 		});
@@ -598,6 +618,48 @@ function getTweetPromise(account) {
 			myConsts.logger(err);
 			myReject(err);
 		});
+	});
+}
+
+function genDalle(numImg, myText)
+{
+	const genOptions = {
+		hostname: '10.0.0.11',
+		port: 9101,
+		path: '/dalle',
+		method: 'POST',
+		headers:
+		{
+			'User-Agent': myConsts.UA,
+			'Content-Type' : 'application/json'
+		}};
+	
+	var requestObj = {
+		num_images: numImg,
+		text: myText
+	};
+	
+	return new Promise(async function(myResolve, myReject) {
+	
+		const genReq = http.request(genOptions, (res) => {
+								var someData = '';
+								res.on('data', (chunk) => { someData += chunk; });
+								res.on('end', () => {
+									var myImageBuffers = new Array();
+									let myImageStrings = JSON.parse(someData.trim());
+									
+									myImageStrings.forEach((x) => {
+										myImageBuffers.push(new MessageAttachment(Buffer.from(x, 'base64'), `img_${Math.random() * numImg}.jpg`));
+									});
+									myResolve(myImageBuffers);
+							});
+							res.on('error', (err) => {
+								myConsts.logger(err);
+								myReject(err);
+							});
+						});
+		genReq.write(JSON.stringify(requestObj));
+		genReq.end();
 	});
 }
 
@@ -1060,6 +1122,17 @@ client.on("messageCreate", async function(message) {
 		  message.channel.send({files: [fs.createReadStream('bestie.gif')]});
 		  break;
 		  
+		  case "dalle":
+		  arg2Start = baseArg != null ? baseArg.indexOf(' ') : null;
+		  arg1 = baseArg.slice(0, arg2Start);
+		  arg2 = baseArg.slice(arg2Start + 1);
+		  message.reply("Generating...");
+		  genDalle(parseInt(arg1), arg2).then(
+			function(imgs) { message.channel.send({files: imgs}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+			  
 		  default:
 		  return;
 	  }
