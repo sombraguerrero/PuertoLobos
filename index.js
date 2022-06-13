@@ -639,27 +639,43 @@ function genDalle(numImg, myText)
 		text: myText
 	};
 	
-	return new Promise(async function(myResolve, myReject) {
-	
-		const genReq = http.request(genOptions, (res) => {
-								var someData = '';
-								res.on('data', (chunk) => { someData += chunk; });
-								res.on('end', () => {
-									var myImageBuffers = new Array();
-									let myImageStrings = JSON.parse(someData.trim());
-									
-									myImageStrings.forEach((x) => {
-										myImageBuffers.push(new MessageAttachment(Buffer.from(x, 'base64'), `img_${Math.random() * numImg}.jpg`));
-									});
-									myResolve(myImageBuffers);
+	return new Promise(function(myResolve, myReject) {
+		try
+		{
+			const genReq = http.request(genOptions, (res) => {
+									var someData = '';
+									res.on('data', (chunk) => { someData += chunk; });
+									res.on('end', () => {
+										var myImageBuffers = new Array();
+										let myImageStrings = JSON.parse(someData);
+										myImageStrings.forEach((x) => {
+											myImageBuffers.push(new MessageAttachment(Buffer.from(x, 'base64'), `img_${Math.random() * numImg}.jpg`));
+										});
+										myResolve(myImageBuffers);
+								});
+								res.on('error', (err) => {
+									myConsts.logger(err);
+									myReject("Response error: Nothing from Dalle!");
+								});
 							});
-							res.on('error', (err) => {
+							
+							genReq.on('error', (err) => {
 								myConsts.logger(err);
-								myReject(err);
+								myReject("Request error: Don't think anybody's home!");
 							});
-						});
-		genReq.write(JSON.stringify(requestObj));
-		genReq.end();
+							
+							genReq.on('timeout', () => {
+								myConsts.logger("Timeout reached: Nothing from Dalle!");
+								myReject("Timeout reached: Nothing from Dalle!");
+							});
+							genReq.write(JSON.stringify(requestObj));
+							genReq.end();
+		}
+		catch(e)
+		{
+			myConsts.logger(e.message);
+			myReject(e.message);
+		}
 	});
 }
 
