@@ -646,13 +646,22 @@ function genDalle(numImg, myText)
 									var someData = '';
 									res.on('data', (chunk) => { someData += chunk; });
 									res.on('end', () => {
-										var myImageBuffers = new Array();
-										let myImageStrings = JSON.parse(someData);
-										myImageStrings.forEach((x) => {
-											myImageBuffers.push(new MessageAttachment(Buffer.from(x, 'base64'), `img_${Math.random() * numImg}.jpg`));
-										});
-										myResolve(myImageBuffers);
+										try
+										{
+											var myImageBuffers = new Array();
+											let myImageStrings = JSON.parse(someData);
+											myImageStrings.forEach((x) => {
+												myImageBuffers.push(new MessageAttachment(Buffer.from(x, 'base64'), `img_${Math.random() * numImg}.jpg`));
+											});
+											myResolve(myImageBuffers);
+										}
+										catch (e)
+										{
+											myReject("I think Dalle choked on that one...");
+										}
+										
 								});
+				
 								res.on('error', (err) => {
 									myConsts.logger(err);
 									myReject("Response error: Nothing from Dalle!");
@@ -674,7 +683,7 @@ function genDalle(numImg, myText)
 		catch(e)
 		{
 			myConsts.logger(e.message);
-			myReject(e.message);
+			myReject("I think Dalle choked on that one...");
 		}
 	});
 }
