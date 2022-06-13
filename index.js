@@ -634,9 +634,18 @@ function genDalle(numImg, myText)
 			'Content-Type' : 'application/json'
 		}};
 	
+	var testNum = parseInt(numImg);
+	var testText = myText;
+	
+	if (Number.isNaN(testNum))
+	{
+		testNum = 1;
+		testText = numImg + " " + myText;
+	}
+	
 	var requestObj = {
-		num_images: numImg,
-		text: myText
+		num_images: testNum,
+		text: testText
 	};
 	
 	return new Promise(function(myResolve, myReject) {
@@ -1152,7 +1161,7 @@ client.on("messageCreate", async function(message) {
 		  arg1 = baseArg.slice(0, arg2Start);
 		  arg2 = baseArg.slice(arg2Start + 1);
 		  message.reply("Generating...");
-		  genDalle(parseInt(arg1), arg2).then(
+		  genDalle(arg1, arg2).then(
 			function(imgs) { message.channel.send({files: imgs}); },
 			function(err) { message.channel.send(err); }
 		  );
