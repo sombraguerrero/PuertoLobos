@@ -1,5 +1,5 @@
 'use strict';
-const mariadb = require('mariadb');
+//const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
 const http = require('http');
 const https = require('https');
@@ -7,6 +7,7 @@ const fs = require('fs');
 const FormData = require('form-data');
 const MersenneTwister = require('mersennetwister');
 
+/**
 function getKeyResponse() {
 	 let conn;
 	 let promptOut = 'test';
@@ -41,7 +42,7 @@ function getKeyResponse() {
 	 }
 	 
 }
-
+**/
 function writeToDiscord(objIn, activity) {
 	var postString = JSON.stringify(objIn);
 		  const discordOptions = {
@@ -97,11 +98,11 @@ function RandomColor(num) {
 	];
 	
 	var rgbStr = " 0d(" + aRgb[0] + "," + aRgb[1] + "," + aRgb[2] + ")";
-	
+	var textOutput = `Hex: #${hexColor.toUpperCase()} RGB: ${rgbStr}`;	
 	//Credit to Russell Heimlich (http://www.russellheimlich.com/blog) for the image generator.
 	const getOptions = {
 			hostname: 'localhost',
-			path: `/dummyimage/code.php?x=640x480/${hexColor}/FFF/&text=0x${hexColor.toUpperCase()}${encodeURIComponent(rgbStr)}`,
+			path: `/dummyimage/code.php?x=640x480/${hexColor}/FFF/)}`,
 			method: 'GET',
 			headers: {
 			  'User-Agent': myConsts.UA
@@ -112,11 +113,11 @@ function RandomColor(num) {
 	//Perform GET request with specified options.
 	var formData = new FormData();
 	http.request(getOptions, (addr_res) => {
-		var imgOut = fs.createWriteStream("/var/services/web/webhooks/color.png");
+		var imgOut = fs.createWriteStream("color.png");
 		addr_res.pipe(imgOut);
 		imgOut.on('finish', () => {
-				formData.append('content', `${myConsts.GREG} Random Color!`);
-				formData.append('file', fs.createReadStream("/var/services/web/webhooks/color.png"), {filename: 'color.png'});
+				formData.append('content', `${myConsts.GREG} Random Color!\r\n${textOutput}`);
+				formData.append('file', fs.createReadStream("color.png"), {filename: 'color.png'});
 				formData.submit(`https://discord.com/api/webhooks/${myConsts.PL_botspam}`);
 		});
 	}).end();
@@ -1160,11 +1161,12 @@ switch (task % 21) {
 	console.log('Useless Fact selected.\n');
 	pullStuff(true, 'uselessfacts.jsph.pl', '/random.txt?language=en');
 	break;
-	
+/**	
 	case 2:
 	console.log('Key Responses selected.\n');
 	getKeyResponse();
 	break;
+**/
 	
 	case 3:
 	console.log('NASA APOD selected.\n');

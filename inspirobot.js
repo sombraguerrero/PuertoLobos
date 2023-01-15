@@ -319,7 +319,7 @@ function Face(num) {
 				console.log(imgData);
 				if (faceData.generated) {
 					console.log("It has been generated!\r\n");
-					const filePath = fs.createWriteStream(`/var/services/web/webhooks/faces/${epoch}`);
+					const filePath = fs.createWriteStream(`faces/${epoch}`);
 					const getFace = https.get(`https://this-person-does-not-exist.com/img/${faceData.name}`, function(response) {
 						response.pipe(filePath);
 					});
@@ -327,7 +327,7 @@ function Face(num) {
 						filePath.close();
 						var formData = new FormData();
 						formData.append('content', 'This person does not exist!');
-						formData.append('file', fs.createReadStream(`/var/services/web/webhooks/faces/${epoch}`), { filename: epoch});
+						formData.append('file', fs.createReadStream(`faces/${epoch}`), { filename: epoch});
 						formData.submit(`https://discord.com/api/webhooks/${myConsts.DND}`);
 					});
 				}
@@ -338,12 +338,12 @@ function Face(num) {
 function postFace(e) {
 	var formData = new FormData();
 	formData.append('content', 'This person does not exist!');
-	formData.append('file', fs.createReadStream(`/var/services/web/webhooks/faces/${e}`), { filename: e});
+	formData.append('file', fs.createReadStream(`faces/${e}`), { filename: e});
 	formData.submit(`https://discord.com/api/webhooks/${myConsts.DND}`);
 }
 
-//var val = MersenneTwister.random() * Number.MAX_SAFE_INTEGER;
-var val = 1;
+var val = MersenneTwister.random() * Number.MAX_SAFE_INTEGER;
+//var val = 1;
 if (process.argv.length == 3 && process.argv[2].toLowerCase() == "tweet")
 	GetTweet(val);
 else switch (val % 3)
