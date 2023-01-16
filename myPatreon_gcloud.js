@@ -5,6 +5,14 @@ const myConsts = require('./patreon_constants.js');
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 const client = new SecretManagerServiceClient();
 
+/***
+When using a Google Compute VM, and also assuming the GCloud CLI
+environment is set up correctly, the application's service account
+will automatically take care of Google API authentication credentials,
+but it is still necessary to make sure the VM itself is defined with the
+appropriate OAUTH scopes for any Google APIs being used. IAMs can be used
+to filter access down as appropriate.
+***/
 async function getCredentials() {
 	return new Promise(async function(myRes, myRej) {
 		var secretName = 'client_id';
