@@ -116,7 +116,7 @@ function getPosts(myCreds)
 	}).end();
 }
 
-function Refresh(myCreds)
+async function Refresh(myCreds)
 {
 	var myParams = {
 		grant_type: 'refresh_token',
@@ -134,11 +134,23 @@ function Refresh(myCreds)
 	}
 	
 	var authData = '';
-	const authReq = https.request(AuthOptions, (res) => {
+	const authReq = https.request(AuthOptions, async function(res) {
 		res.on('data', (chunk) => { authData += chunk; });
-		res.on('end', () => {
-			var myLog = fs.createWriteStream('credentials.json');
-                        myLog.write(authData);
+		res.on('end', async function() {
+			var authDataParsed = JSON.parse(authData);
+			const [newAt] = await client.addSecretVersion({
+				parent: 'projects/687367382416/secrets/access_token',
+    				payload: {
+      					data: Buffer.from(authDataParsed.access_token, 'utf8')
+				}
+			});
+			const [newRef] = await client.addSecretVersion({
+                                parent: 'projects/687367382416/secrets/refresh_token',
+                                payload: {
+                                        data: Buffer.from(authDataParsed.refresh_token, 'utf8')
+                                }
+                        });
+
 		});
 		res.on('error', (err) => {
 			var myLog = fs.createWriteStream('log.txt');
@@ -151,11 +163,11 @@ function Refresh(myCreds)
 }
 
 getCredentials().then(
-	function(c) {
+	async function(c) {
 		console.log(JSON.stringify(c)); 
 		if (process.argv.length == 3 && process.argv[2].toLowerCase() == '--refresh')
 		{
-			Refresh(c);
+			await Refresh(c);
 		}
 		else
 		{
