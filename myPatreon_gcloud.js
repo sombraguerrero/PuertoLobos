@@ -1,10 +1,50 @@
 const https = require('https');
 const fs = require('fs');
 const myConsts = require('./patreon_constants.js');
+// Import the Secret Manager client and instantiate it:
+const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const client = new SecretManagerServiceClient();
 
-var myCreds = JSON.parse(fs.readFileSync('patreon_creds.json'));
+async function getCredentials() {
+	return new Promise(async function(myRes, myRej) {
+		var secretName = 'client_id';
+		var rootPath1 = 'projects/687367382416/secrets/';
+		var rootPath2 = '/versions/latest';
 
-function getPosts()
+		const [cIdRequest] = await client.accessSecretVersion({
+			name: rootPath1 + secretName + rootPath2
+  		});
+
+		secretName = 'client_secret';
+        	const [cSecRequest] = await client.accessSecretVersion({
+                	name: rootPath1 + secretName + rootPath2
+        	});
+		secretName = 'access_token';
+        	const [atRequest] = await client.accessSecretVersion({
+                	name: rootPath1 + secretName + rootPath2
+        	});
+		secretName = 'refresh_token';
+        	const [refRequest] = await client.accessSecretVersion({
+                	name: rootPath1 + secretName + rootPath2
+        	});
+		secretName = 'webhook_url';
+                const [whRequest] = await client.accessSecretVersion({
+                        name: rootPath1 + secretName + rootPath2
+                });
+
+		const cIdResponse = cIdRequest.payload.data.toString('utf8');
+		const cSecResponse = cSecRequest.payload.data.toString('utf8');
+		const atResponse = atRequest.payload.data.toString('utf8');
+		const refResponse = refRequest.payload.data.toString('utf8');
+		const whResponse = whRequest.payload.data.toString('utf8');
+		if(cIdResponse != null && cSecResponse != null && atResponse != null && refResponse != null && whResponse != null)
+			myRes({client_id: cIdResponse, client_secret: cSecResponse, access_token: atResponse, refresh_token: refResponse, webhook_url: whResponse});
+		else
+			myRej('Something went wrong with the secret retrieval!');
+	});
+}
+
+function getPosts(myCreds)
 {
 	const PatreonOptions = {
 		hostname: 'patreon.com',
@@ -49,7 +89,7 @@ function getPosts()
 				
 				const discordOptions = {
 					hostname: 'discord.com',
-					path: `/api/webhooks/${myConsts.PL_botspam}`,
+					path: `/api/webhooks/${myCreds.webhook_url}`,
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
@@ -58,6 +98,7 @@ function getPosts()
 				}
 				const discordReq = https.request(discordOptions);
 				discordReq.write(embedString);
+				console.log(discordReq);
 				discordReq.end();
 			}
 		});
@@ -67,13 +108,13 @@ function getPosts()
 	}).end();
 }
 
-function Refresh()
+function Refresh(myCreds)
 {
 	var myParams = {
 		grant_type: 'refresh_token',
 		refresh_token: myCreds.refresh_token,
-		client_id: myConsts.myClientID,
-		client_secret: myConsts.myClientSecret
+		client_id: myCreds.client_id,
+		client_secret: myCreds.client_secret
 	}
 	const AuthOptions = {
 		hostname: 'patreon.com',
@@ -88,22 +129,31 @@ function Refresh()
 	const authReq = https.request(AuthOptions, (res) => {
 		res.on('data', (chunk) => { authData += chunk; });
 		res.on('end', () => {
-			var myLog = fs.createWriteStream('patreon_creds.json');
-			myLog.write(authData);
+			var myLog = fs.createWriteStream('credentials.json');
+                        myLog.write(authData);
 		});
 		res.on('error', (err) => {
-			myConsts.logger(err);
+			var myLog = fs.createWriteStream('log.txt');
+			myLog.write(err);
 		});
 	});
 	authReq.write(new URLSearchParams(myParams).toString());
+	console.log(authReq);
 	authReq.end();
 }
 
-if (process.argv.length == 3 && process.argv[2].toLowerCase() == '--refresh')
-{
-	Refresh();
-}
-else
-{
-	getPosts();
-}
+getCredentials().then(
+	function(c) {
+		console.log(JSON.stringify(c)); 
+		if (process.argv.length == 3 && process.argv[2].toLowerCase() == '--refresh')
+		{
+			Refresh(c);
+		}
+		else
+		{
+			getPosts(c);
+		}
+	},
+	function(err) { var myLog = fs.createWriteStream('log.txt'); myLog.write(err); }
+	);
+
