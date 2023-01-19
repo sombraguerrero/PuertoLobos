@@ -6,6 +6,9 @@ var myCreds = JSON.parse(fs.readFileSync('patreon_creds.json'));
 
 function getPosts()
 {
+	//https://www.patreon.com/oauth2/authorize?response_type=code&client_id=<client id>&redirect_uri=<redirect url>&scope=campaigns%20campaigns.posts&state=<optional string>
+	//Take code from returned URL. An initial call to /token with grant_type authorization code has to be done manually in advance in order to begin
+	//perpetuating the refresb tokens.
 	const PatreonOptions = {
 		hostname: 'patreon.com',
 		path: `/api/oauth2/v2/campaigns/${myConsts.campaign}/posts?fields%5Bpost%5D=app_id,app_status,content,embed_data,embed_url,is_paid,is_public,tiers,published_at,title,url`,
