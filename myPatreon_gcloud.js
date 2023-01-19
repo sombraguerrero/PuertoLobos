@@ -12,6 +12,10 @@ will automatically take care of Google API authentication credentials,
 but it is still necessary to make sure the VM itself is defined with the
 appropriate OAUTH scopes for any Google APIs being used. IAMs can be used
 to filter access down as appropriate.
+
+https://www.patreon.com/oauth2/authorize?response_type=code&client_id=<client id>&redirect_uri=<redirect url>&scope=campaigns%20campaigns.posts&state=<optional string>
+Take code from returned URL. An initial call to /token with grant_type authorization code has to be done manually in advance in order to begin
+perpetuating the refresb tokens.
 ***/
 async function getCredentials() {
 	return new Promise(async function(myRes, myRej) {
