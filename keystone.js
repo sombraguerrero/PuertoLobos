@@ -1,5 +1,5 @@
 'use strict';
-//const mariadb = require('mariadb');
+const mariadb = require('mariadb');
 const myConsts = require('./myConstants.js');
 const http = require('http');
 const https = require('https');
@@ -7,7 +7,6 @@ const fs = require('fs');
 const FormData = require('form-data');
 const MersenneTwister = require('mersennetwister');
 
-/**
 function getKeyResponse() {
 	 let conn;
 	 let promptOut = 'test';
@@ -42,7 +41,7 @@ function getKeyResponse() {
 	 }
 	 
 }
-**/
+
 function writeToDiscord(objIn, activity) {
 	var postString = JSON.stringify(objIn);
 		  const discordOptions = {
@@ -79,6 +78,68 @@ function writeToDiscord(objIn, activity) {
 		  //console.log(postString);
 }
 
+function GetDalle(num) {
+	const getOptions = {
+				hostname: 'api.twitter.com',
+				path: '/2/users/1492677599390322689/tweets?max_results=5&expansions=attachments.media_keys&media.fields=url,preview_image_url',
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA,
+				  'Authorization':`Bearer ${myConsts.BIRD}`
+				}
+	};
+	console.log(getOptions.path);
+	//Perform GET request with specified options.
+	let imgData = '';
+	//let account = accounts[Math.floor(num * accounts.length)];
+	https.request(getOptions, (addr_res) => {
+		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+			addr_res.on('end', () => {
+			var birdData = JSON.parse(imgData);
+			var selectedTweet = birdData.data[Math.round(num % birdData.data.length)];
+			var birdMedia = birdData.includes.media;
+			var myEmbed = new Object();
+			var myImage = new Object();
+			
+			if ((typeof selectedTweet.attachments) != "undefined")
+			{
+				var selectedAttachmentKeyIndex =  selectedTweet.attachments.media_keys.length > 1 ? Math.floor(num * selectedTweet.attachments.media_keys.length) : 0;
+				var selectedMediaIndex = birdMedia.findIndex(media => media.media_key == selectedTweet.attachments.media_keys[selectedAttachmentKeyIndex]);
+				myImage.url = birdMedia[selectedMediaIndex].type == 'photo' ? birdMedia[selectedMediaIndex].url : birdMedia[selectedMediaIndex].preview_image_url;
+				myEmbed.image = myImage;
+			}
+			
+			myEmbed.color = num % 16777215; // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+			myEmbed.title = "Weird DALL-E";
+			
+			//Account for cases where either the URL ends the Tweet or is absent.
+			if (!selectedTweet.text.startsWith("https"))
+			{
+				var urlPos = selectedTweet.text.indexOf("https");
+				if (urlPos < 0)
+				{
+					myEmbed.description = selectedTweet.text;
+				}
+				else
+				{
+					myEmbed.url = selectedTweet.text.substring(urlPos);
+					myEmbed.description = selectedTweet.text.substring(0, urlPos);
+				}
+			}
+			else
+			{
+				myEmbed.url = selectedTweet.text;
+			}
+			
+			var myRoot = new Object();
+			myRoot.embeds = new Array();
+			myRoot.embeds.push(myEmbed);
+			writeToDiscord(myRoot, 'Weird DALL-E');
+			
+		});
+	}).end();	
+}
+
 function NatalieDee(comicDate) {
 	var myRoot = new Object();
 	myRoot.content = `${myConsts.GREG}\r\nhttp://nataliedee.com/${comicDate}`;
@@ -97,12 +158,12 @@ function RandomColor(num) {
     parseInt(aRgbHex[2], 16)
 	];
 	
-	var rgbStr = " 0d(" + aRgb[0] + "," + aRgb[1] + "," + aRgb[2] + ")";
-	var textOutput = `Hex: #${hexColor.toUpperCase()} RGB: ${rgbStr}`;	
+	var rgbStr = `(${aRgb[0]}, ${aRgb[1]}, ${aRgb[2]})`;
+	var textOutput = `Hex: #${hexColor.toUpperCase()} RGB: ${rgbStr}`;
 	//Credit to Russell Heimlich (http://www.russellheimlich.com/blog) for the image generator.
 	const getOptions = {
 			hostname: 'localhost',
-			path: `/dummyimage/code.php?x=640x480/${hexColor}/FFF/)}`,
+			path: `/dummyimage/code.php?x=640x480/${hexColor}/FFF/`,
 			method: 'GET',
 			headers: {
 			  'User-Agent': myConsts.UA
@@ -113,11 +174,11 @@ function RandomColor(num) {
 	//Perform GET request with specified options.
 	var formData = new FormData();
 	http.request(getOptions, (addr_res) => {
-		var imgOut = fs.createWriteStream("color.png");
+		var imgOut = fs.createWriteStream("/volume1/main/webhooks/color.png");
 		addr_res.pipe(imgOut);
 		imgOut.on('finish', () => {
-				formData.append('content', `${myConsts.GREG} Random Color!\r\n${textOutput}`);
-				formData.append('file', fs.createReadStream("color.png"), {filename: 'color.png'});
+				formData.append('content', `${myConsts.GREG} \r\nRandom Color Code!\r\n${textOutput}`);
+				formData.append('file', fs.createReadStream("/volume1/main/webhooks/color.png"), {filename: 'color.png'});
 				formData.submit(`https://discord.com/api/webhooks/${myConsts.PL_botspam}`);
 		});
 	}).end();
@@ -157,38 +218,67 @@ function InspiroBot(num) {
 function Face(num) {
 	let now = new Date().getTime() / 1000.0;
 	let epoch = `${Math.floor(now)}.jpg`;
-	const getOptions = {
-			hostname: 'this-person-does-not-exist.com',
-			path: '/en?new',
-			method: 'GET',
-			headers: {
-			  'User-Agent': myConsts.UA
-			}
-		  };
-
-	//Perform GET request with specified options.
-	let imgData = '';
-	https.request(getOptions, (addr_res) => {
-		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
-			addr_res.on('end', () => {
-				let faceData = JSON.parse(imgData);
-				console.log(imgData);
-				if (faceData.generated) {
-					console.log("It has been generated!\r\n");
-					const filePath = fs.createWriteStream(`/var/services/web/webhooks/faces/${epoch}`);
-					const getFace = https.get(`https://this-person-does-not-exist.com/img/${faceData.name}`, function(response) {
-						response.pipe(filePath);
-					});
-					filePath.on('finish',() => {
-						filePath.close();
-						var formData = new FormData();
-						formData.append('content', myConsts.GREG +' This person does not exist!');
-						formData.append('file', fs.createReadStream(`/var/services/web/webhooks/faces/${epoch}`), { filename: epoch});
-						formData.submit(`https://discord.com/api/webhooks/${myConsts.PL_botspam}`);
-					});
-				};
+		  
+	// thispersondoesnotexist.com
+	if (myConsts.FACES == 2)
+	{
+		const getOptions = {
+				hostname: 'thispersondoesnotexist.com',
+				path: '/image',
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA
+				}
+		};
+		let imgData = '';
+		https.request(getOptions, (res) => {
+			const filePath = fs.createWriteStream(`/volume1/main/webhooks/faces/${epoch}`);
+			res.pipe(filePath);
+			filePath.on('finish',() => {
+				filePath.close();
+				var formData = new FormData();
+				formData.append('content', myConsts.GREG +' This person does not exist!');
+				formData.append('file', fs.createReadStream(`/volume1/main/webhooks/faces/${epoch}`), { filename: epoch});
+				formData.submit(`https://discord.com/api/webhooks/${myConsts.PL_botspam}`);
 			});
-	}).end();
+		}).end();
+	}
+	else
+	{
+	
+		// this-person-does-not-exist.com
+		const getOptions = {
+				hostname: 'this-person-does-not-exist.com',
+				path: '/en?new',
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA
+				}
+		};
+		
+		let imgData = '';
+		https.request(getOptions, (addr_res) => {
+			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+				addr_res.on('end', () => {
+					let faceData = JSON.parse(imgData);
+					console.log(imgData);
+					if (faceData.generated) {
+						console.log("It has been generated!\r\n");
+						const filePath = fs.createWriteStream(`/volume1/main/webhooks/faces/${epoch}`);
+						const getFace = https.get(`https://this-person-does-not-exist.com/img/${faceData.name}`, function(response) {
+							response.pipe(filePath);
+						});
+						filePath.on('finish',() => {
+							filePath.close();
+							var formData = new FormData();
+							formData.append('content', myConsts.GREG +' This person does not exist!');
+							formData.append('file', fs.createReadStream(`/volume1/main/webhooks/faces/${epoch}`), { filename: epoch});
+							formData.submit(`https://discord.com/api/webhooks/${myConsts.PL_botspam}`);
+						});
+					};
+				});
+		}).end();
+	}
 }
 
 function CatAsService(num) {
@@ -1150,7 +1240,7 @@ else if (process.argv.length == 4) {
 else
 	task = val;
 console.log(`Main value: ${val}\r\nTask value: ${task}`);
-switch (task % 21) {
+switch (task % 22) {
 //switch (debugVal) {
 	case 0:
 	console.log('Dad Joke selected.\n');
@@ -1159,14 +1249,13 @@ switch (task % 21) {
 	
 	case 1:
 	console.log('Useless Fact selected.\n');
-	pullStuff(true, 'uselessfacts.jsph.pl', '/random.txt?language=en');
+	pullStuff(true, 'uselessfacts.jsph.pl', '/api/v2/facts/random?language=en');
 	break;
-/**	
+	
 	case 2:
 	console.log('Key Responses selected.\n');
 	getKeyResponse();
 	break;
-**/
 	
 	case 3:
 	console.log('NASA APOD selected.\n');
@@ -1257,6 +1346,13 @@ switch (task % 21) {
 	case 19:
 	console.log('This person does not exist!');
 	Face(val);
+	//CatAsService(val);
+	break;
+	
+	case 20:
+	console.log('Weird DALL-E');
+	GetDalle(val);
+	//CatAsService(val);
 	break;
 	
 	default:
