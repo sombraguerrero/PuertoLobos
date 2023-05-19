@@ -249,7 +249,7 @@ function Face(num) {
 		// this-person-does-not-exist.com
 		const getOptions = {
 				hostname: 'this-person-does-not-exist.com',
-				path: '/en?new',
+				path: `/new?time=${new Date().getTime() / 1000.0}&gender=all&age=all&etnic=all`,
 				method: 'GET',
 				headers: {
 				  'User-Agent': myConsts.UA
@@ -1323,11 +1323,12 @@ switch (task % 22) {
 	DogAsService(val);
 	break;
 	
-	case 15:
+	/* case 15:
 	console.log('Random Dog Fact selected.\n');
 	DogFact();
-	break;
+	break; */
 	
+	case 15:
 	case 16:
 	console.log('Random Cat selected.\n');
 	CatAsService(val);
