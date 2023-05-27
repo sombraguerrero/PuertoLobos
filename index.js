@@ -15,6 +15,7 @@ const pool = mariadb.createPool({
      connectionLimit: myConsts.conn.connectionLimit
 });
 const { randomUUID: uuidv4 } = require('crypto');
+const { evaluate } = require('./math.js');
 
 const helpEmbed = new MessageEmbed()
 	.setColor('#0099ff')
@@ -26,15 +27,18 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
 		{ name: 'sean, daniel, finn, comfort, chris', value: 'Responds with a random Tweet from the daily character accounts.', inline: true },
 		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
-		{ name: 'height [tallest, shortest, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
-		{ name: 'guess <number>', value: `Guess a positive integer between 0 and ${myConsts.GUESS_MAX}!`, inline: true },
+		{ name: 'height [tallest, shortest, average, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
+		{ name: 'guess m=<maximum guess> <your guess>', value: `Guess a positive integer between 0 and m!`, inline: true },
 		{ name: 'dadjokes', value: 'Returns 3 dad jokes (for Nick)', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
 		{ name: 'time', value: 'Converts the current UTC time to local time in multiple time zones.', inline: true },
 		{ name: 'imgflip', value: 'Generates a single-image meme via ImgFlip using completely random text.', inline: true },
 		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
 		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true },
-		{ name: 'bestie', value: 'Pulls a gif of Captain Spirit saying, \"So true, bestie!\"', inline: true }
+		{ name: 'calc', value: 'Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)', inline: true },
+		//{ name: 'dalle **1-9** **text**', value: 'Uses Sombra\'s Gen 1 DALL-E Playground to generate images (server must be running)', inline: true },
+		{ name: 'bestie', value: 'Pulls a gif of Captain Spirit saying, \"So true, bestie!\"', inline: true },
+		{ name: 'flat', value: 'Pulls a gif of the flat hamster!', inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -96,7 +100,7 @@ async function getImg(panels, boxes) {
   }
 }
 
-function NumberGamePromise(g) {
+function NumberGamePromise(m, g) {
 	const seedOptions = {
 			hostname: 'api.random.org',
 			path: '/json-rpc/4/invoke',
@@ -114,7 +118,7 @@ function NumberGamePromise(g) {
 			  "apiKey": myConsts.RAND_ORG,
 			  "n": 1,
 			  "min": 0,
-			  "max": myConsts.GUESS_MAX //upper bound is 1000000000
+			  "max": m //upper bound is 1000000000
 			  },
 			  "id": 1284
 		};
@@ -134,7 +138,7 @@ function NumberGamePromise(g) {
 						//myConsts.logger("Seed per Random.org (Geometric Mean of 3 elements): " + mySeed);
 					}
 					else {
-						mySeed = Math.floor(Math.random() * myConsts.GUESS_MAX);
+						mySeed = Math.floor(Math.random() * m);
 						console.log("Seed per Math.random(): " + mySeed);
 					}
 					var lowerBound = mySeed - Math.ceil(mySeed * .15);
@@ -209,62 +213,26 @@ function inspiroPromise() {
 
 function facePromise() {
 	return new Promise(function(myResolve, myReject) {
-		let now = new Date().getTime() / 1000.0;
-		let epoch = `${Math.floor(now)}.jpg`;
+		let now = Math.floor(new Date().getTime() / 1000.0);
+		let epoch = `${now}.jpg`;
 		
-		/***
-		const getOptions = {
-			hostname: 'thispersondoesnotexist.com',
-			path: '/image',
-			method: 'GET',
-			headers: {
-			  'User-Agent': myConsts.UA
-			}
-		};
-		
-		const faceReq = https.request(getOptions, (res) => {
-		const filePath = fs.createWriteStream(`/var/services/web/webhooks/prompt-bot/faces/${epoch}`);
-		res.pipe(filePath);
-		filePath.on('finish',() => {
-			filePath.close();
-			myResolve(`/var/services/web/webhooks/prompt-bot/faces/${epoch}`);
-		});
-	}).end();
-	***/
-		const getOptions = {
-				hostname: 'this-person-does-not-exist.com',
-				path: '/en?new',
+		if (myConsts.FACES == 2)
+		{
+			const getOptions = {
+				hostname: 'thispersondoesnotexist.com',
+				path: '/image',
 				method: 'GET',
 				headers: {
 				  'User-Agent': myConsts.UA
 				}
-			  };
-
-		//Perform GET request with specified options.
-		let imgData = '';
-		const faceReq = https.request(getOptions, (addr_res) => {
-			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
-				addr_res.on('end', () => {
-				let faceData = JSON.parse(imgData);
-				if (faceData.generated) {
-					console.log("It has been generated!\r\n");
-					const filePath = fs.createWriteStream(`/var/services/web/webhooks/prompt-bot/faces/${epoch}`);
-					const getFace = https.get(`https://this-person-does-not-exist.com/img/${faceData.name}`, function(response) {
-						response.pipe(filePath);
-					});
-					filePath.on('finish',() => {
-						filePath.close();
-						myResolve(`/var/services/web/webhooks/prompt-bot/faces/${epoch}`);
-					});
-				}
-				else
-				{
-					myReject('It seems I have no countenance available to bless you!');
-				}
-			});
-			addr_res.on('error', (err) => {
-				myConsts.logger(err);
-				myReject('It seems I have no countenance available to bless you!');
+			};
+			
+			const faceReq = https.request(getOptions, (res) => {
+			const filePath = fs.createWriteStream(`/volume1/main/webhooks/prompt-bot/faces/${epoch}`);
+			res.pipe(filePath);
+			filePath.on('finish',() => {
+				filePath.close();
+				myResolve(`/volume1/main/webhooks/prompt-bot/faces/${epoch}`);
 			});
 		}).end();
 		
@@ -272,6 +240,46 @@ function facePromise() {
 			myConsts.logger(err);
 			myReject('It seems I have no countenance available to bless you!');
 		});
+		}
+		else
+		{
+			const getOptions = {
+					hostname: 'this-person-does-not-exist.com',
+					path: `/new?time=${now}&gender=all&age=all&etnic=all`,
+					method: 'GET',
+					headers: {
+					  'User-Agent': myConsts.UA
+					}
+				  };
+
+			//Perform GET request with specified options.
+			let imgData = '';
+			const faceReq = https.request(getOptions, (addr_res) => {
+				addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+					addr_res.on('end', () => {
+					let faceData = JSON.parse(imgData);
+					if (faceData.generated) {
+						console.log("It has been generated!\r\n");
+						const filePath = fs.createWriteStream(`/volume1/main/webhooks/prompt-bot/faces/${epoch}`);
+						const getFace = https.get(`https://this-person-does-not-exist.com/img/${faceData.name}`, function(response) {
+							response.pipe(filePath);
+						});
+						filePath.on('finish',() => {
+							filePath.close();
+							myResolve(`/volume1/main/webhooks/prompt-bot/faces/${epoch}`);
+						});
+					}
+					else
+					{
+						myReject('It seems I have no countenance available to bless you!');
+					}
+				});
+				addr_res.on('error', (err) => {
+					myConsts.logger(err);
+					myReject('It seems I have no countenance available to bless you!');
+				});
+			}).end();
+		}
 	});
 }
 
@@ -628,6 +636,7 @@ function genDalle(numImg, myText)
 		port: 9101,
 		path: '/dalle',
 		method: 'POST',
+		timeout: 900000,
 		headers:
 		{
 			'User-Agent': myConsts.UA,
@@ -649,50 +658,58 @@ function genDalle(numImg, myText)
 	};
 	
 	return new Promise(function(myResolve, myReject) {
-		try
+		if (testNum <= 10)
 		{
-			const genReq = http.request(genOptions, (res) => {
-									var someData = '';
-									res.on('data', (chunk) => { someData += chunk; });
-									res.on('end', () => {
-										try
-										{
-											var myImageBuffers = new Array();
-											let myImageStrings = JSON.parse(someData);
-											myImageStrings.forEach((x) => {
-												myImageBuffers.push(new MessageAttachment(Buffer.from(x, 'base64'), `img_${Math.random() * numImg}.jpg`));
-											});
-											myResolve(myImageBuffers);
-										}
-										catch (e)
-										{
-											myReject("I think Dalle choked on that one...");
-										}
-										
+			try
+			{
+				const genReq = http.request(genOptions, (res) => {
+										var someData = '';
+										res.on('data', (chunk) => { someData += chunk; });
+										res.on('end', () => {
+											try
+											{
+												var myImageBuffers = new Array();
+												let myImageStrings = JSON.parse(someData);
+												myImageStrings.generatedImgs.forEach((x) => {
+													myImageBuffers.push(new MessageAttachment(Buffer.from(x, 'base64'), `img_${uuidv4().toUpperCase()}.jpg`));
+												});
+												myResolve(myImageBuffers);
+											}
+											catch (e)
+											{
+												myReject("I think Dalle choked on that one...");
+											}
+											
+									});
+					
+									res.on('error', (err) => {
+										myConsts.logger(err);
+										myReject("Response error: Nothing from Dalle!");
+									});
 								});
-				
-								res.on('error', (err) => {
+								
+								genReq.on('error', (err) => {
 									myConsts.logger(err);
-									myReject("Response error: Nothing from Dalle!");
+									myReject("Request error: Don't think anybody's home!");
 								});
-							});
-							
-							genReq.on('error', (err) => {
-								myConsts.logger(err);
-								myReject("Request error: Don't think anybody's home!");
-							});
-							
-							genReq.on('timeout', () => {
-								myConsts.logger("Timeout reached: Nothing from Dalle!");
-								myReject("Timeout reached: Nothing from Dalle!");
-							});
-							genReq.write(JSON.stringify(requestObj));
-							genReq.end();
+								
+								genReq.on('timeout', () => {
+									genReq.destroy();
+									myConsts.logger("Timeout reached: Nothing from Dalle!");
+									myReject("Timeout reached: <@279483476527546368> is likely not running the server right now.");
+								});
+								genReq.write(JSON.stringify(requestObj));
+								genReq.end();
+			}
+			catch(e)
+			{
+				myConsts.logger(e.message);
+				myReject("I think Dalle choked on that one...");
+			}
 		}
-		catch(e)
+		else
 		{
-			myConsts.logger(e.message);
-			myReject("I think Dalle choked on that one...");
+			myReject("Nope! No more than 10, please! I don't want any repeats of the teeth incident!");
 		}
 	});
 }
@@ -960,6 +977,22 @@ function goodNightPromise() {
 		});
 	});
 }
+
+function getImage(img) {
+	return new Promise(function(myResolve, myReject)
+	{
+		try
+		{
+			myResolve(fs.createReadStream(img));
+		}
+		catch(err)
+		{
+			myConsts.logger(err.name + ": " + err.message + "\r\n");
+			myReject('Welp, I seem to be having some trouble getting that for you! :slight_frown:');
+		}
+	});
+}
+
 client.on("messageCreate", async function(message) {
 	try
 	{
@@ -970,7 +1003,10 @@ client.on("messageCreate", async function(message) {
 	  
 	  else if (message.content.toLowerCase().startsWith('good morning'))
 	  {
-		  message.channel.send({files: [fs.createReadStream('wakeup.gif')]});
+		  getImage('wakeup.gif').then(
+			function(imgStream) { message.channel.send({files: [imgStream]}); },
+			function(err) { message.channel.send(err); }
+		  );
 		  return;
 	  }
 	  
@@ -1058,15 +1094,24 @@ client.on("messageCreate", async function(message) {
 		  
 		  case 'guess':
 		  args = baseArg != null ? baseArg.split(' ') : [];
-		  if (args.length == 1 && parseInt(args[0]) <= myConsts.GUESS_MAX)
+		  if (args.length == 2 && args[0].startsWith("m="))
 		  {
-			  NumberGamePromise(parseInt(args[0])).then(
-				  function(resp) { message.channel.send(resp); },
-				  function(err) { message.channel.send(err); }
-			  );
+			  var max = parseInt(args[0].substring(2));
+			  var userGuess = parseInt(args[1]);
+			  if (userGuess <= max)
+			  {
+				NumberGamePromise(max, userGuess).then(
+				function(resp) { message.channel.send(resp); },
+				function(err) { message.channel.send(err); }
+				);
+			  }
+			  else
+			  {
+				  message.channel.send("You can't guess over the maximum!");
+			  }
 		  }
 		 else {
-		 	message.channel.send("Nope, can't guess with that!");
+		 	message.channel.send("!guess m=<maximum guess> <your guess>");
 		 }
 		  break;
 		  
@@ -1081,6 +1126,11 @@ client.on("messageCreate", async function(message) {
 				console.log(resp);
 			}
 		  );
+		  break;
+		  
+		  case 'calc':
+		  //console.log(JSON.stringify(message.author.id));
+		  message.channel.send(evaluate(baseArg).toString());
 		  break;
 		  
 		  case 'meme':
@@ -1134,12 +1184,14 @@ client.on("messageCreate", async function(message) {
 		  case 'uuid':
 			  message.author.send(uuidv4().toUpperCase());
 		  break;
+		  /***
 		  case 'svs':
 			svsPromise().then(
 				function(resp) { message.author.send(resp); },
 				function(err) { message.author.send(err); }
 			);
 		  break;
+		  ***/
 		  case 'dadjokes':
 		  dadJokesPromise().then(
 			function(jokes) { message.channel.send(jokes); },
@@ -1148,14 +1200,32 @@ client.on("messageCreate", async function(message) {
 		  break;
 		  
 		  case 'brad':
-		  message.channel.send('ABAP - All Brads are :pig:');
+		  //message.channel.send('ABAP - All Brads are :pig:');
 		  //message.channel.send('ABABAMFS - All Brads are  :sunglasses:');
+		  getImage('dance-party.gif').then(
+			function(imgStream) { message.channel.send({files: [imgStream]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  return;
 		  break;
 		  
 		  case "bestie":
-		  message.channel.send({files: [fs.createReadStream('bestie.gif')]});
+		  getImage('bestie.gif').then(
+			function(imgStream) { message.channel.send({files: [imgStream]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  return;
 		  break;
 		  
+		  case "flat":
+		  getImage('flat.gif').then(
+			function(imgStream) { message.channel.send({files: [imgStream]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  return;
+		  break;
+		  
+		  /***
 		  case "dalle":
 		  arg2Start = baseArg != null ? baseArg.indexOf(' ') : null;
 		  arg1 = baseArg.slice(0, arg2Start);
@@ -1163,9 +1233,10 @@ client.on("messageCreate", async function(message) {
 		  message.reply("Generating...");
 		  genDalle(arg1, arg2).then(
 			function(imgs) { message.channel.send({files: imgs}); },
-			function(err) { message.channel.send(err); }
+			function(err) { message.channel.send("<@279483476527546368>\r\n" + err); }
 		  );
 		  break;
+		  ***/
 			  
 		  default:
 		  return;

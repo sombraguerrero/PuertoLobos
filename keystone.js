@@ -216,8 +216,8 @@ function InspiroBot(num) {
 }
 
 function Face(num) {
-	let now = new Date().getTime() / 1000.0;
-	let epoch = `${Math.floor(now)}.jpg`;
+	let now = Math.floor(new Date().getTime() / 1000.0);
+	let epoch = `${now}.jpg`;
 		  
 	// thispersondoesnotexist.com
 	if (myConsts.FACES == 2)
@@ -249,7 +249,7 @@ function Face(num) {
 		// this-person-does-not-exist.com
 		const getOptions = {
 				hostname: 'this-person-does-not-exist.com',
-				path: `/new?time=${Math.floor(new Date().getTime() / 1000)}&gender=all&age=all&etnic=all`,
+				path: `/new?time=${now}&gender=all&age=all&etnic=all`,
 				method: 'GET',
 				headers: {
 				  'User-Agent': myConsts.UA

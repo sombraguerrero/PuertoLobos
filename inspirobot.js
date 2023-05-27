@@ -312,8 +312,8 @@ function GetTweet(num) {
 }
 
 function Face(num) {
-	let now = new Date().getTime() / 1000.0;
-	let epoch = `${Math.floor(now)}.jpg`;
+	let now = Math.floor(new Date().getTime() / 1000.0);
+	let epoch = `${now}.jpg`;
 	
 	if (myConsts.FACES == 2)
 	{
@@ -339,7 +339,7 @@ function Face(num) {
 	{
 		const getOptions = {
 				hostname: 'this-person-does-not-exist.com',
-				path: `/new?time=${new Date().getTime() / 1000.0}&gender=all&age=all&etnic=all`,
+				path: `/new?time=${now}&gender=all&age=all&etnic=all`,
 				method: 'GET',
 				headers: {
 				  'User-Agent': myConsts.UA
@@ -380,17 +380,25 @@ function postFace(e) {
 
 var val = MersenneTwister.random() * Number.MAX_SAFE_INTEGER;
 //var val = 1;
-if (process.argv.length == 3 && process.argv[2].toLowerCase() == "tweet")
-	GetTweet(val);
-else switch (val % 3)
+if (process.argv.length == 3)
 {
-	case 2:
-	CallImgFlip(val);
-	break;
-	case 1:
-	Face(val);
-	break;
-	case 0:
-	default:
-	pickRemote(val);
+	var choice = parseInt(process.argv[2]);
+	switch(choice)
+	{
+		case 4:
+			GetTweet(val);
+		break;
+		case 3:
+			CallImgFlip(val);
+		break;
+		case 2:
+			Face(val);
+		break;
+		case 1:
+		default:
+			pickRemote(val);
+		break;
+	}
 }
+else
+	pickRemote(val);
