@@ -249,7 +249,7 @@ function Face(num) {
 		// this-person-does-not-exist.com
 		const getOptions = {
 				hostname: 'this-person-does-not-exist.com',
-				path: `/new?time=${new Date().getTime() / 1000.0}&gender=all&age=all&etnic=all`,
+				path: `/new?time=${Math.floor(new Date().getTime() / 1000)}&gender=all&age=all&etnic=all`,
 				method: 'GET',
 				headers: {
 				  'User-Agent': myConsts.UA
@@ -558,8 +558,8 @@ function ChuckNorris() {
 
 function DogFact() {
 	const contentOptions = {
-			hostname: 'dog-api.kinduff.com',
-			path: '/api/facts',
+			hostname: 'dogapi.dog',
+			path: '/api/v2/facts',
 			method: 'GET',
 			headers: {
 			  'Accept': 'application/json',
@@ -582,7 +582,7 @@ function DogFact() {
 			var parsedData = JSON.parse(rawData);
 			//console.log("My Content\r\n" + parsedData);
 			var postData = new Object();
-			postData.content = myConsts.GREG + ' ' + parsedData.facts[0];
+			postData.content = myConsts.GREG + ' ' + parsedData.data[0].attributes.body;
 			writeToDiscord(postData, 'Dog fact!!!');
 		} catch (e) {
 		  console.error(e.message);
@@ -1323,12 +1323,11 @@ switch (task % 22) {
 	DogAsService(val);
 	break;
 	
-	/* case 15:
+	case 15:
 	console.log('Random Dog Fact selected.\n');
 	DogFact();
-	break; */
+	break;
 	
-	case 15:
 	case 16:
 	console.log('Random Cat selected.\n');
 	CatAsService(val);
