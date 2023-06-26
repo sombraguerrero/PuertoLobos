@@ -2,7 +2,6 @@
 const https = require('https');
 const fs = require('fs');
 const FormData = require('form-data');
-const MersenneTwister = require('mersennetwister');
 const myConsts = require('./myConstants.js');
 // Stage Get request to retrieve data from either dad jokes or facts API
 function pickRemote(num) {
@@ -204,7 +203,7 @@ function CallImgFlip(num) {
 				var boxText = new Array();
 				for (var x = 0; x < someLength; x++)
 				{
-					boxText.push(boxTextSrc.words[Math.floor(MersenneTwister.random() * boxTextSrc.total)].toUpperCase());
+					boxText.push(boxTextSrc.words[Math.floor(myConsts.getSeed(false) * boxTextSrc.total)].toUpperCase());
 				}
 				
 			const discordOptions = {
@@ -377,28 +376,34 @@ function postFace(e) {
 	formData.submit(`https://discord.com/api/webhooks/${myConsts.DND}`);
 }
 
-
-var val = MersenneTwister.random() * Number.MAX_SAFE_INTEGER;
-//var val = 1;
-if (process.argv.length == 3)
-{
-	var choice = parseInt(process.argv[2]);
-	switch(choice)
+myConsts.getSeed(true)
+.then(
+	function(r) {
+		var val = r * Number.MAX_SAFE_INTEGER;
+		//var val = 1;
+	if (process.argv.length == 3)
 	{
-		case 4:
-			GetTweet(val);
-		break;
-		case 3:
-			CallImgFlip(val);
-		break;
-		case 2:
-			Face(val);
-		break;
-		case 1:
-		default:
-			pickRemote(val);
-		break;
+		var choice = parseInt(process.argv[2]);
+		switch(choice)
+		{
+			case 4:
+				GetTweet(val);
+			break;
+			case 3:
+				CallImgFlip(val);
+			break;
+			case 2:
+				Face(val);
+			break;
+			case 1:
+			default:
+				pickRemote(val);
+			break;
+		}
 	}
-}
-else
-	pickRemote(val);
+	else
+		pickRemote(val);
+	},
+	function(anError) {
+		console.log(anError);
+	});

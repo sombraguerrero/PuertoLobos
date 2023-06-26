@@ -5,7 +5,6 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const FormData = require('form-data');
-const MersenneTwister = require('mersennetwister');
 
 function getKeyResponse() {
 	 let conn;
@@ -63,7 +62,10 @@ function writeToDiscord(objIn, activity) {
 			  console.log(`BODY: ${chunk}\r\n`);
 			});
 			res.on('end', () => {
-			  console.log(`Activity: ${activity}\r\n`);
+			  console.log(`Activity: ${activity}\r\nStatus Code & Message: ${res.statusCode} - ${res.statusMessage}`);
+			});
+			res.on('error', () => {
+			  console.log(`Activity: ${activity}\r\nStatus Code & Message: ${res.statusCode} - ${res.statusMessage}`);
 			});
 		  });
 
@@ -380,7 +382,7 @@ function pullStuff(rockFact, target, targetpath) {
 			writeToDiscord(postData, srcActivity);
 	}
 	 catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	  });
 	});
@@ -453,69 +455,6 @@ function selectDate(num, mode) {
 	return finalDate;
 }
 
-function srand() {
-	const seedOptions = {
-			hostname: 'api.random.org',
-			path: '/json-rpc/4/invoke',
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'User-Agent': myConsts.UA
-			}
-		  };
-		  
-	  var seedIn = {
-		  "jsonrpc": "2.0",
-		  "method": "generateIntegers",
-		  "params": {
-			  "apiKey": myConsts.RAND_ORG,
-			  "n": 3,
-			  "min": 0,
-			  "max": 2000000
-			  },
-			  "id": 1284
-		};
-		
-		try {
-			const seedReq = https.request(seedOptions, (res) => {
-			console.log(`STATUS: ${res.statusCode}`);
-			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-				var mySeed = 0;
-				console.log("Random.org response: " + chunk);
-				let parsedSeed = JSON.parse(chunk);
-				if (!(typeof parsedSeed.result === "undefined")) {
-					mySeed = Math.round(Math.cbrt(parsedSeed.result.random.data[0] * parsedSeed.result.random.data[1] * parsedSeed.result.random.data[2]));
-					console.log("Seed per Random.org (Geometric Mean of 3 elements): " + mySeed);
-				}
-				else {
-					mySeed = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-					console.log("Seed per Math.random(): " + mySeed);
-				}
-				return mySeed;
-			});
-			res.on('end', () => {
-			  console.log('No more data in response.' + "\r\nThis is for seeding the Mersenne Twister.");
-			});
-			});
-
-		  seedReq.on('error', (e) => {
-			console.error(`problem with request: ${e.message}`);
-		  });
-		  
-		  var postString = JSON.stringify(seedIn);
-		  // Write data to request body
-		  seedReq.write(postString);
-		  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-		  seedReq.end();
-		  
-		} catch (e) {
-		  console.error(e.message);
-		}
-}
-
 function ChuckNorris() {
 	const contentOptions = {
 			hostname: 'api.chucknorris.io',
@@ -545,7 +484,7 @@ function ChuckNorris() {
 			postData.content = myConsts.GREG + ' ' + parsedData.value;
 			writeToDiscord(postData, 'Chuck Norris!!!');
 		} catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -585,7 +524,7 @@ function DogFact() {
 			postData.content = myConsts.GREG + ' ' + parsedData.data[0].attributes.body;
 			writeToDiscord(postData, 'Dog fact!!!');
 		} catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -625,7 +564,7 @@ function CatFact() {
 			postData.content = myConsts.GREG + ' ' + parsedData.fact;
 			writeToDiscord(postData, 'Cat fact!');
 		} catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -666,7 +605,7 @@ function JeopardyQ() {
 			postData.content = textOut;
 			writeToDiscord(postData, 'Trivia!');
 		} catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -706,7 +645,7 @@ function ThisOrThat() {
 			postData.content = `${myConsts.GREG} ${parsedData.this} or ${parsedData.that}?`;
 			writeToDiscord(postData, 'This or That!');
 		} catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -747,7 +686,7 @@ function Affirm() {
 			postData.content = myConsts.GREG + ' ' + parsedData.affirmation;
 			writeToDiscord(postData, 'Affirmations!');
 		} catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -794,7 +733,7 @@ function AdviceSlip() {
 	//Using request method for the get too, so calling end() here too.
 	contentReq.end();
 	contentReq.on('error', (e) => {
-	  console.error(`Got error: ${e.message}`);
+	  console.error(`${res.statusCode}: ${res.statusMessage}`);
 	});
 }
 
@@ -847,7 +786,7 @@ function NasaAPOD(apodDate, num) {
 			myRoot.embeds.push(myEmbed);
 			writeToDiscord(myRoot, `Nasa APOD (${apodDate})`);
 		} catch (e) {
-		  console.error(e.message);
+			console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -921,14 +860,14 @@ function NasaMRover(num) {
 			}
 		}
 		catch (e) {
-			console.error(e.message);
+			console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
 	//Using request method for the get too, so calling end() here too.
 	contentReq.end();
 	contentReq.on('error', (e) => {
-	  console.error(`Got error: ${e.message}`);
+	  console.error(e.message);
 	});
 }
 
@@ -998,7 +937,7 @@ function Pokemon(num) {
 			myRoot.embeds.push(myEmbed);
 			writeToDiscord(myRoot, 'Random Pokémon');
 		} catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -1061,7 +1000,7 @@ function Unsplash(num) {
 			myRoot.embeds.push(myEmbed);
 			writeToDiscord(myRoot, 'Unsplash');
 		} catch (e) {
-		  console.error(e.message);
+		  console.error(`${res.statusCode}: ${res.statusMessage}`);
 		}
 	});
 	});
@@ -1217,7 +1156,7 @@ function CallImgFlip(num) {
 				var boxText = new Array();
 				for (var x = 0; x < someLength; x++)
 				{
-					boxText.push(boxTextSrc.words[Math.floor(MersenneTwister.random() * boxTextSrc.total)].toUpperCase());
+					boxText.push(boxTextSrc.words[Math.floor(myConsts.getSeed(false) * boxTextSrc.total)].toUpperCase());
 				}
 				
 			genImgFlip(num, boxText).then(
@@ -1228,141 +1167,143 @@ function CallImgFlip(num) {
 	}).end();
 }
 
-//var mt = new MersenneTwister(srand());
-var val = Math.round(MersenneTwister.random() * Number.MAX_SAFE_INTEGER);
-var task = -1;
-if (process.argv.length == 3)
-	task = process.argv[2];
-else if (process.argv.length == 4) {
-	task = process.argv[2];
-	val = parseInt(process.argv[3])
-}
-else
-	task = val;
-console.log(`Main value: ${val}\r\nTask value: ${task}`);
-switch (task % 22) {
-//switch (debugVal) {
-	case 0:
-	console.log('Dad Joke selected.\n');
-	pullStuff(false, 'icanhazdadjoke.com', '');
-	break;
-	
-	case 1:
-	console.log('Useless Fact selected.\n');
-	pullStuff(true, 'uselessfacts.jsph.pl', '/api/v2/facts/random?language=en');
-	break;
-	
-	case 2:
-	console.log('Key Responses selected.\n');
-	getKeyResponse();
-	break;
-	
-	case 3:
-	console.log('NASA APOD selected.\n');
-	NasaAPOD(selectDate(val, "apod"), val);
-	break;
-	
-	case 4:
-	console.log('Trivia selected.\n');
-	JeopardyQ();
-	break;
-	
-	case 5:
-	console.log('Advice selected.\n');
-	AdviceSlip();
-	break;
-	
-	case 6:
-	console.log('Random Pokemon selected.\n');
-	Pokemon(val);
-	break;
-	
-	case 7:
-	if (Math.round(MersenneTwister.random()) == 1) {
-		console.log('Chuck Norris won the coin toss in option 7, because he\'s Chuck Norris!!!\n');
-		ChuckNorris();
-	}
-	else {
-		console.log('A random cat won the coin toss in option 7, because cat!\n');
-		CatAsService(val);
-	}
-	break;
-	
-	case 8:
-	console.log('This Or That selected.\n');
-	ThisOrThat();
-	break;
-	
-	case 9:
-	console.log('Affirmations selected.\n');
-	Affirm();
-	break;
-	
-	case 10:
-	console.log('Unsplash selected.\n');
-	Unsplash(val);
-	break;
-	
-	case 11:
-	console.log('InspiroBot selected.\n');
-	InspiroBot(val);
-	break;
-	
-	case 12:
-	console.log('Random color selected.\n');
-	RandomColor(val);
-	break;
-	
-	case 13:
-	console.log('Mars Rover photo selected.\n');
-	NasaMRover(val);
-	break;
-	
-	case 14:
-	console.log('Random Dog selected.\n');
-	DogAsService(val);
-	break;
-	
-	case 15:
-	console.log('Random Dog Fact selected.\n');
-	DogFact();
-	break;
-	
-	case 16:
-	console.log('Random Cat selected.\n');
-	CatAsService(val);
-	break;
-	
-	case 17:
-	console.log('Random Cat Fact selected.\n');
-	CatFact();
-	break;
-	
-	case 18:
-	console.log('ImgFlip selected.\n');
-	CallImgFlip(val);
-	break;
-	
-	case 19:
-	console.log('This person does not exist!');
-	Face(val);
-	//CatAsService(val);
-	break;
-	
-	case 20:
-	console.log('Weird DALL-E');
-	GetDalle(val);
-	//CatAsService(val);
-	break;
-	
-	default:
-	if (Math.round(MersenneTwister.random()) == 1) {
-		console.log('NatalieDee selected.\n');
-		NatalieDee(selectDate(val, "nat"));
-	}
-	else {
-		console.log('Random cat beat NatalieDee in a coin toss, because cat!\n');
-		CatAsService(val);
-	}
-	break;
-}
+myConsts.getSeed(true)
+.then(
+	function(r)
+	{
+		var val = Math.round(r * Number.MAX_SAFE_INTEGER);
+		var task = -1;
+		if (process.argv.length == 3)
+			task = process.argv[2];
+		else if (process.argv.length == 4) {
+			task = process.argv[2];
+			val = parseInt(process.argv[3])
+		}
+		else
+			task = val;
+		console.log(`Main value: ${val}\r\nTask value: ${task}`);
+		switch (task % 20)
+		{
+		//switch (debugVal) {
+			case 0:
+			console.log('Dad Joke selected.\n');
+			pullStuff(false, 'icanhazdadjoke.com', '');
+			break;
+			
+			case 1:
+			console.log('Useless Fact selected.\n');
+			pullStuff(true, 'uselessfacts.jsph.pl', '/api/v2/facts/random?language=en');
+			break;
+			
+			case 2:
+			console.log('Key Responses selected.\n');
+			getKeyResponse();
+			break;
+			
+			case 3:
+			console.log('NASA APOD selected.\n');
+			NasaAPOD(selectDate(val, "apod"), val);
+			break;
+			
+			case 4:
+			console.log('Trivia selected.\n');
+			JeopardyQ();
+			break;
+			
+			case 5:
+			console.log('Advice selected.\n');
+			AdviceSlip();
+			break;
+			
+			case 6:
+			console.log('Random Pokemon selected.\n');
+			Pokemon(val);
+			break;
+			
+			case 7:
+			if (Math.round(myConsts.getSeed(false)) == 1) {
+				console.log('Chuck Norris won the coin toss in option 7, because he\'s Chuck Norris!!!\n');
+				ChuckNorris();
+			}
+			else {
+				console.log('A random cat won the coin toss in option 7, because cat!\n');
+				CatAsService(val);
+			}
+			break;
+			
+			case 8:
+			console.log('This Or That selected.\n');
+			ThisOrThat();
+			break;
+			
+			case 9:
+			console.log('Affirmations selected.\n');
+			Affirm();
+			break;
+			
+			case 10:
+			console.log('Unsplash selected.\n');
+			Unsplash(val);
+			break;
+			
+			case 11:
+			console.log('InspiroBot selected.\n');
+			InspiroBot(val);
+			break;
+			
+			case 12:
+			console.log('Random color selected.\n');
+			RandomColor(val);
+			break;
+			
+			case 13:
+			console.log('Mars Rover photo selected.\n');
+			NasaMRover(val);
+			break;
+			
+			case 14:
+			console.log('Random Dog selected.\n');
+			DogAsService(val);
+			break;
+			
+			case 15:
+			console.log('Random Dog Fact selected.\n');
+			DogFact();
+			break;
+			
+			case 16:
+			console.log('Random Cat selected.\n');
+			CatAsService(val);
+			break;
+			
+			case 17:
+			console.log('Random Cat Fact selected.\n');
+			CatFact();
+			break;
+			
+			case 18:
+			console.log('ImgFlip selected.\n');
+			CallImgFlip(val);
+			break;
+			
+			case 19:
+			console.log('This person does not exist!');
+			Face(val);
+			//CatAsService(val);
+			break;
+			
+			default:
+			if (Math.round(myConsts.getSeed(false)) == 1) {
+				console.log('NatalieDee selected.\n');
+				NatalieDee(selectDate(val, "nat"));
+			}
+			else {
+				console.log('Random cat beat NatalieDee in a coin toss, because cat!\n');
+				CatAsService(val);
+			}
+			break;
+		}
+	},
+	function(anError) {
+		console.log(anError);
+	});
