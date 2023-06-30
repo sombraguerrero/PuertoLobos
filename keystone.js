@@ -1173,11 +1173,11 @@ function CallImgFlip(num) {
 		});
 	}
 
-myConsts.getSeed(true)
+myConsts.getSeed(true, 1)
 .then(
 	function(r)
 	{
-		var val = Math.round(r * Number.MAX_SAFE_INTEGER);
+		var val = Math.round(r[0] * Number.MAX_SAFE_INTEGER);
 		var task = -1;
 		if (process.argv.length == 3)
 			task = process.argv[2];
