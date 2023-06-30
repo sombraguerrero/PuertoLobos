@@ -874,7 +874,7 @@ function NasaMRover(num) {
 function Pokemon(num) {
 	const contentOptions = {
 			hostname: 'pokeapi.co',
-			path: `/api/v2/pokemon/${num % 898}`,
+			path: `/api/v2/pokemon/${num % 1015}`,
 			method: 'GET',
 			headers: {
 			  'Accept': 'application/json',
@@ -1119,53 +1119,59 @@ function genImgFlip(num, textArray) {
 	}
 
 function CallImgFlip(num) {
-	var someLength = Math.floor(num % 3) + 2;
-	var someYear = Math.round(num % 2021);
-	var period = '';
-	if (someYear >= 1500)
-	{
-		period = someYear;
-	}
-	else {
-		if (someYear > 1399 && someYear <= 1499)
-			period = '15th%20century';
-		else if (someYear > 1299 && someYear <= 1399)
-			period = '14th%20century';
-		else if (someYear > 1199 && someYear <= 1299)
-			period = '13th%20century';
-		else if (someYear > 1099 && someYear <= 1199)
-			period = '12th%20century';
-		else
-			period = 'before%2012th%20century';
-	}
-	console.log(period);
-	const getOptions = {
-			hostname: 'www.merriam-webster.com',
-			path: `/lapi/v1/mwol-search/ety-explorer/date/${period}`,
-			method: 'GET',
-			headers: {
-			  'User-Agent': myConsts.UA
-			}
-		  };
-		  
-	let textData = '';
-	https.request(getOptions, (textReq) => {
-		textReq.on('data', (textIn) => { textData += textIn; });
-			textReq.on('end', () => {
-				var boxTextSrc = JSON.parse(textData);
-				var boxText = new Array();
-				for (var x = 0; x < someLength; x++)
+		return new Promise(function(myResolve) {
+			myConsts.getSeed(true, 7)
+			.then(
+				function(seeds)
 				{
-					boxText.push(boxTextSrc.words[Math.floor(myConsts.getSeed(false) * boxTextSrc.total)].toUpperCase());
-				}
-				
-			genImgFlip(num, boxText).then(
-					function(resp) { writeToDiscord(resp, 'ImgFlip'); console.log(resp); },
-					function(err) { myConsts.logger(err); console.log(err); }
-				);
+					var boxText = new Array();
+					var someLength = Math.floor(seeds[0] * 3) + 2;
+					var someYear = Math.round(seeds[1] * new Date().getFullYear() - 1);
+					var period = '';
+					if (someYear >= 1500)
+					{
+						period = someYear;
+					}
+					else {
+						if (someYear > 1399 && someYear <= 1499)
+							period = '15th%20century';
+						else if (someYear > 1299 && someYear <= 1399)
+							period = '14th%20century';
+						else if (someYear > 1199 && someYear <= 1299)
+							period = '13th%20century';
+						else if (someYear > 1099 && someYear <= 1199)
+							period = '12th%20century';
+						else
+							period = 'before%2012th%20century';
+					}
+					console.log(period);
+					const getOptions = {
+							hostname: 'www.merriam-webster.com',
+							path: `/lapi/v1/mwol-search/ety-explorer/date/${period}`,
+							method: 'GET',
+							headers: {
+							  'User-Agent': myConsts.UA
+							}
+						  };
+						  
+					let textData = '';
+					
+						https.request(getOptions, (textReq) => {
+							textReq.on('data', (textIn) => { textData += textIn; });
+								textReq.on('end', () => {
+									var boxTextSrc = JSON.parse(textData);
+									for (var x = 2; x <= someLength; x++)
+									{
+										boxText.push(boxTextSrc.words[Math.floor(seeds[x] * boxTextSrc.total)].toUpperCase());
+									}
+									genImgFlip(num, boxText).then(
+										function(resp) { writeToDiscord(resp, 'ImgFlip'); console.log(resp); },
+										function(err) { myConsts.logger(err); console.log(err); });
+							});
+						}).end();
+				});
 		});
-	}).end();
-}
+	}
 
 myConsts.getSeed(true)
 .then(

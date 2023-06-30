@@ -25,7 +25,6 @@ const helpEmbed = new MessageEmbed()
 		{ name: '8ball', value: 'Answers binary questions.', inline: true },
 		{ name: 'push <prompt, answer, greg>', value: 'Adds random writer\'s prompt, 8ball answer, or Great Silence response to database. Returns insert ID', inline: true },
 		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
-		{ name: 'sean, daniel, finn, comfort, chris', value: 'Responds with a random Tweet from the daily character accounts.', inline: true },
 		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
 		{ name: 'height [tallest, shortest, average, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
 		{ name: 'guess m=<maximum guess> <your guess>', value: `Guess a positive integer between 0 and m!`, inline: true },
@@ -36,7 +35,6 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
 		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true },
 		{ name: 'calc', value: 'Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)', inline: true },
-		//{ name: 'dalle **1-9** **text**', value: 'Uses Sombra\'s Gen 1 DALL-E Playground to generate images (server must be running)', inline: true },
 		{ name: 'bestie', value: 'Pulls a gif of Captain Spirit saying, \"So true, bestie!\"', inline: true },
 		{ name: 'flat', value: 'Pulls a gif of the flat hamster!', inline: true }
 	);
@@ -100,77 +98,35 @@ async function getImg(panels, boxes) {
   }
 }
 
-function NumberGamePromise(m, g) {
-	const seedOptions = {
-			hostname: 'api.random.org',
-			path: '/json-rpc/4/invoke',
-			method: 'POST',
-			headers: {
-			  'Content-Type': 'application/json',
-			  'User-Agent': myConsts.UA
-			}
-		  };
-		  
-	  var seedIn = {
-		  "jsonrpc": "2.0",
-		  "method": "generateIntegers",
-		  "params": {
-			  "apiKey": myConsts.RAND_ORG,
-			  "n": 1,
-			  "min": 0,
-			  "max": m //upper bound is 1000000000
-			  },
-			  "id": 1284
-		};
-		
+function NumberGamePromise(m, g) {		
 		return new Promise(function(myResolve, myReject) {
 			try {
-				const seedReq = https.request(seedOptions, (res) => {
-				res.setEncoding('utf8');
-
-				res.on('data', (chunk) => {
-					var mySeed = 0;
-					//myConsts.logger("Random.org response: " + chunk);
-					let parsedSeed = JSON.parse(chunk);
-					if (typeof parsedSeed.result !== "undefined") {
-						//mySeed = Math.round(Math.cbrt(parsedSeed.result.random.data[0] * parsedSeed.result.random.data[1] * parsedSeed.result.random.data[2]));
-						mySeed = parsedSeed.result.random.data[0];
-						//myConsts.logger("Seed per Random.org (Geometric Mean of 3 elements): " + mySeed);
-					}
-					else {
-						mySeed = Math.floor(Math.random() * m);
-						console.log("Seed per Math.random(): " + mySeed);
-					}
-					var lowerBound = mySeed - Math.ceil(mySeed * .15);
-					console.log("LB: " + lowerBound);
-					var upperBound = Math.ceil(mySeed * 1.15);
-					console.log("UB: " + upperBound);
-					console.log("User Guess: " + g);
-					if (g == mySeed)
-						myResolve(`It *was* ${mySeed}! Lucky!`);
-					else if (g >= lowerBound && g <= upperBound)
-						myResolve(`You were close! It was ${mySeed}!`);
-					else if (g < lowerBound || g > upperBound)
-						myResolve(`Better luck next time! It was ${mySeed}!`);
-				});
-				});
-
-			  seedReq.on('error', (e) => {
-				myConsts.logger(`problem with request: ${e.message}`);
-				myReject(`problem with request: ${e.message}`);
-			  });
-			  
-			  var postString = JSON.stringify(seedIn);
-			  // Write data to request body
-			  seedReq.write(postString);
-			  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
-			  seedReq.end();
-			  
-			} catch (e) {
-			  myConsts.logger(e.message);
-			  myReject(e.message);
-			}
-	});
+				myConsts.getSeed(true, 1)
+				.then(
+					function(seed)
+					{
+						var mySeed = Math.floor(seed[0] * m);
+						//myConsts.logger("Random.org response: " + chunk);
+						var lowerBound = mySeed - Math.ceil(mySeed * .15);
+						console.log("LB: " + lowerBound);
+						var upperBound = Math.ceil(mySeed * 1.15);
+						console.log("UB: " + upperBound);
+						console.log("User Guess: " + g);
+						if (g == mySeed)
+							myResolve(`It *was* ${mySeed}! Lucky!`);
+						else if (g >= lowerBound && g <= upperBound)
+							myResolve(`You were close! It was ${mySeed}!`);
+						else if (g < lowerBound || g > upperBound)
+							myResolve(`Better luck next time! It was ${mySeed}!`);
+					},
+					function(anError) { console.log(anError); });
+				}
+				catch (e)
+				{
+					myConsts.logger(e.message);
+					myReject(e.message);
+				}
+		});
 }
 
 function inspiroPromise() {
@@ -195,7 +151,7 @@ function inspiroPromise() {
 				var myEmbed = new Object();
 				myEmbed.image = myImage;
 				myEmbed.title = "InspiroBot says...";
-				myEmbed.color = Math.floor(Math.random() * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
+				myEmbed.color = Math.floor(myConsts.getSeed(false,1)[0] * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
 				myResolve(myEmbed);
 			});
 			addr_res.on('error', (err) => {
@@ -285,9 +241,13 @@ function facePromise() {
 
 function dadJokesPromise() {
 	return new Promise(function(myResolve, myReject) {
-		const getOptions = {
+		myConsts.getSeed(true, 4)
+		.then(
+			function(seed)
+			{
+				const getOptions = {
 				hostname: 'icanhazdadjoke.com',
-				path: `/search?limit=30&page=${Math.floor(Math.random() * myConsts.PAGES)}`,
+				path: `/search?limit=30&page=${Math.floor(seed[0] * myConsts.PAGES)}`,
 				method: 'GET',
 				headers: {
 				  'User-Agent': myConsts.UA,
@@ -295,65 +255,35 @@ function dadJokesPromise() {
 				}
 			  };
 
-		//Perform GET request with specified options.
-		let jokesData = '';
-		const jokesReq = https.request(getOptions, (jokeRes) => {
-			jokeRes.on('data', (jokes) => { jokesData += jokes; });
-				jokeRes.on('end', () => {
+				//Perform GET request with specified options.
+				let jokesData = '';
+				const jokesReq = https.request(getOptions, (jokeRes) => {
+					jokeRes.on('data', (jokes) => { jokesData += jokes; });
+						jokeRes.on('end', () => {
+						
+						var jokesParsed = JSON.parse(jokesData);
+						var jokesCollection = jokesParsed.results;
+						var jokesStr = '';
+						for (i = 1; i <= 3; i++)
+						{
+							jokesStr += i + '.\t' + jokesCollection[Math.floor(seed[i] * jokesCollection.length)].joke + '\r\n';
+						}
+						//console.log("String content: " + jokesStr);
+						myResolve(jokesStr);
+					});
+					jokeRes.on('error', (err) => {
+						myConsts.logger(err);
+						myReject('Apparently, we *cannot* haz dadjokes right now!');
+					});
+				}).end();
 				
-				var jokesParsed = JSON.parse(jokesData);
-				var jokesCollection = jokesParsed.results;
-				var jokesStr = '';
-				for (i = 1; i <= 3; i++)
-				{
-					jokesStr += i + '.\t' + jokesCollection[Math.floor(Math.random() * jokesCollection.length)].joke + '\r\n';
-				}
-				//console.log("String content: " + jokesStr);
-				myResolve(jokesStr);
-			});
-			jokeRes.on('error', (err) => {
-				myConsts.logger(err);
-				myReject('Apparently, we *cannot* haz dadjokes right now!');
-			});
-		}).end();
-		
-		jokesReq.on('error', (err) => {
-			myConsts.logger(err);
-			myReject('Apparently, we *cannot* haz dadjokes right now!');
-		});
-	});
-}
-
-function svsPromise() {
-	return new Promise(function(myResolve, myReject) {
-		const getOptions = {
-				hostname: 'localhost',
-				port: 9843,
-				path: '/svs',
-				method: 'GET',
-				headers: {
-				  'User-Agent': myConsts.UA,
-				  'Accept': 'text/plain'
-				}
-			  };
-
-		//Perform GET request with specified options.
-		let svsData = '';
-		const svsReq = http.request(getOptions, (svsRes) => {
-			svsRes.on('data', (svs) => { svsData += svs; });
-				svsRes.on('end', () => {
-					myResolve(svsData);
-			});
-			svsRes.on('error', (err) => {
-				myConsts.logger(err);
-				myReject('Encryption failure!');
-			});
-		}).end();
-		
-		svsReq.on('error', (err) => {
-			myConsts.logger(err);
-			myReject('Encryption failure!');
-		});
+				jokesReq.on('error', (err) => {
+					myConsts.logger(err);
+					myReject('Apparently, we *cannot* haz dadjokes right now!');
+				});
+			},
+			function(anError) { console.log(anError); }
+			);
 	});
 }
 
@@ -509,214 +439,10 @@ function BuildTimePromises() {
 		passingTime(myPromises);
 	});
 }
-function getTweetPromise(account) {
-	var num = Math.random();
-	var myEmbed = new Object();
-	var birdData = new Object();
-	var selectedTweet = new Object();
-	var birdMedia = new Object();
-	var myImage = new Object();
-	const accounts = [
-		{
-			"name": "LiS2Comfort",
-			"id" : '1408937956577062912'
-		},
-		{
-			"name": "Daily Finn",
-			"id": '1417389468978405381'
-		},
-		{
-			"name": "Daily Sean",
-			"id": '1417198402601902083'
-		},
-		{
-			"name": "Daily Daniel",
-			"id": '1417252091945435136'
-		},
-		{
-			"name": "Daily Chris",
-			"id": '1417256090715164675'
-		}
-	
-	];
-	var selectedAccount = null;
-	switch (account.toLowerCase())
-	{
-		case "comfort":
-		selectedAccount = accounts[0];
-		break;
-		case "finn":
-		selectedAccount = accounts[1];
-		break;
-		case "daniel":
-		selectedAccount = accounts[3];
-		break;
-		case "chris":
-		selectedAccount = accounts[4];
-		break;
-		case "sean":
-		default:
-		selectedAccount = accounts[2];
-		break;
-	}
-	
-	const getOptions = {
-				hostname: 'api.twitter.com',
-				path: `/2/users/${selectedAccount.id}/tweets?max_results=100&expansions=attachments.media_keys&media.fields=url,preview_image_url`,
-				method: 'GET',
-				headers: {
-				  'User-Agent': myConsts.UA,
-				  'Authorization':`Bearer ${myConsts.BIRD}`
-				}
-	};
-	//console.log(getOptions.path);
-	//Perform GET request with specified options.
-	let imgData = '';
-	
-	return new Promise(function(myResolve, myReject) {
-	
-		//let account = accounts[Math.floor(num * accounts.length)];
-		const tweeetReq = https.request(getOptions, (addr_res) => {
-			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
-				addr_res.on('end', () => {
-				birdData = JSON.parse(imgData);
-				selectedTweet = birdData.data[Math.round(birdData.data.length * num)];
-				birdMedia = birdData.includes.media;
-				myImage = new Object();
-				
-				if ((typeof selectedTweet.attachments) != "undefined" && selectedTweet.attachments != null)
-				{
-					var selectedAttachmentKeyIndex =  selectedTweet.attachments.media_keys.length > 1 ? Math.floor(num * selectedTweet.attachments.media_keys.length) : 0;
-					var selectedMediaIndex = birdMedia.findIndex(media => media.media_key == selectedTweet.attachments.media_keys[selectedAttachmentKeyIndex]);
-					myImage.url = birdMedia[selectedMediaIndex].type == 'photo' ? birdMedia[selectedMediaIndex].url.toString() : birdMedia[selectedMediaIndex].preview_image_url.toString();
-					myEmbed.image = myImage;
-				}
-				
-				myEmbed.color = Math.floor(num * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
-				myEmbed.title = selectedAccount.name;
-				
-				//Account for cases where either the URL ends the Tweet or is absent.
-				if (!selectedTweet.text.startsWith("https"))
-				{
-					var urlPos = selectedTweet.text.indexOf("https");
-					if (urlPos < 0)
-					{
-						myEmbed.description = selectedTweet.text;
-					}
-					else
-					{
-						myEmbed.url = selectedTweet.text.substring(urlPos);
-						myEmbed.description = selectedTweet.text.substring(0, urlPos);
-					}
-				}
-				else
-				{
-					myEmbed.url = selectedTweet.text;
-					myEmbed.description = 'A randomly selected Tweet.';
-				}
-				myResolve(myEmbed);
-			});
-			addr_res.on('error', (err) => {
-				myConsts.logger(err);
-				myReject(err);
-			});
-		}).end();
-		
-		tweeetReq.on('error', (err) => {
-			myConsts.logger(err);
-			myReject(err);
-		});
-	});
-}
-
-function genDalle(numImg, myText)
-{
-	const genOptions = {
-		hostname: '10.0.0.11',
-		port: 9101,
-		path: '/dalle',
-		method: 'POST',
-		timeout: 900000,
-		headers:
-		{
-			'User-Agent': myConsts.UA,
-			'Content-Type' : 'application/json'
-		}};
-	
-	var testNum = parseInt(numImg);
-	var testText = myText;
-	
-	if (Number.isNaN(testNum))
-	{
-		testNum = 1;
-		testText = numImg + " " + myText;
-	}
-	
-	var requestObj = {
-		num_images: testNum,
-		text: testText
-	};
-	
-	return new Promise(function(myResolve, myReject) {
-		if (testNum <= 10)
-		{
-			try
-			{
-				const genReq = http.request(genOptions, (res) => {
-										var someData = '';
-										res.on('data', (chunk) => { someData += chunk; });
-										res.on('end', () => {
-											try
-											{
-												var myImageBuffers = new Array();
-												let myImageStrings = JSON.parse(someData);
-												myImageStrings.generatedImgs.forEach((x) => {
-													myImageBuffers.push(new MessageAttachment(Buffer.from(x, 'base64'), `img_${uuidv4().toUpperCase()}.jpg`));
-												});
-												myResolve(myImageBuffers);
-											}
-											catch (e)
-											{
-												myReject("I think Dalle choked on that one...");
-											}
-											
-									});
-					
-									res.on('error', (err) => {
-										myConsts.logger(err);
-										myReject("Response error: Nothing from Dalle!");
-									});
-								});
-								
-								genReq.on('error', (err) => {
-									myConsts.logger(err);
-									myReject("Request error: Don't think anybody's home!");
-								});
-								
-								genReq.on('timeout', () => {
-									genReq.destroy();
-									myConsts.logger("Timeout reached: Nothing from Dalle!");
-									myReject("Timeout reached: <@279483476527546368> is likely not running the server right now.");
-								});
-								genReq.write(JSON.stringify(requestObj));
-								genReq.end();
-			}
-			catch(e)
-			{
-				myConsts.logger(e.message);
-				myReject("I think Dalle choked on that one...");
-			}
-		}
-		else
-		{
-			myReject("Nope! No more than 10, please! I don't want any repeats of the teeth incident!");
-		}
-	});
-}
 
 async function genImgFlipDB(memeText, p, t)
 {
-	var num = Math.random();
+	var num = myConsts.getSeed(false,1)[0];
 	var myEmbed = new Object();
 	var myImage = new Object();
 	var selectedMeme  = '';
@@ -797,54 +523,59 @@ async function genImgFlipDB(memeText, p, t)
 	}
 	
 	function CallImgFlip() {
-		num = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-		var boxText = new Array();
-		var someLength = Math.floor(num % 3) + 2;
-		var someYear = Math.round(num % 2021);
-		var period = '';
-		if (someYear >= 1500)
-		{
-			period = someYear;
-		}
-		else {
-			if (someYear > 1399 && someYear <= 1499)
-				period = '15th%20century';
-			else if (someYear > 1299 && someYear <= 1399)
-				period = '14th%20century';
-			else if (someYear > 1199 && someYear <= 1299)
-				period = '13th%20century';
-			else if (someYear > 1099 && someYear <= 1199)
-				period = '12th%20century';
-			else
-				period = 'before%2012th%20century';
-		}
-		console.log(period);
-		const getOptions = {
-				hostname: 'www.merriam-webster.com',
-				path: `/lapi/v1/mwol-search/ety-explorer/date/${period}`,
-				method: 'GET',
-				headers: {
-				  'User-Agent': myConsts.UA
-				}
-			  };
-			  
-		let textData = '';
 		return new Promise(function(myResolve) {
-			https.request(getOptions, (textReq) => {
-				textReq.on('data', (textIn) => { textData += textIn; });
-					textReq.on('end', () => {
-						var boxTextSrc = JSON.parse(textData);
-						for (var x = 0; x < someLength; x++)
-						{
-							boxText.push(boxTextSrc.words[Math.floor(Math.random() * boxTextSrc.total)].toUpperCase());
-						}
-						myResolve(boxText);
+			myConsts.getSeed(true, 7)
+			.then(
+				function(seeds)
+				{
+					var boxText = new Array();
+					var someLength = Math.floor(seeds[0] * 3) + 2;
+					var someYear = Math.round(seeds[1] * new Date().getFullYear() - 1);
+					var period = '';
+					if (someYear >= 1500)
+					{
+						period = someYear;
+					}
+					else {
+						if (someYear > 1399 && someYear <= 1499)
+							period = '15th%20century';
+						else if (someYear > 1299 && someYear <= 1399)
+							period = '14th%20century';
+						else if (someYear > 1199 && someYear <= 1299)
+							period = '13th%20century';
+						else if (someYear > 1099 && someYear <= 1199)
+							period = '12th%20century';
+						else
+							period = 'before%2012th%20century';
+					}
+					console.log(period);
+					const getOptions = {
+							hostname: 'www.merriam-webster.com',
+							path: `/lapi/v1/mwol-search/ety-explorer/date/${period}`,
+							method: 'GET',
+							headers: {
+							  'User-Agent': myConsts.UA
+							}
+						  };
+						  
+					let textData = '';
+					
+						https.request(getOptions, (textReq) => {
+							textReq.on('data', (textIn) => { textData += textIn; });
+								textReq.on('end', () => {
+									var boxTextSrc = JSON.parse(textData);
+									for (var x = 2; x <= someLength; x++)
+									{
+										boxText.push(boxTextSrc.words[Math.floor(seeds[x] * boxTextSrc.total)].toUpperCase());
+									}
+									myResolve(boxText);
+							});
+						}).end();
 				});
-			}).end();
-			});
+		});
 	}
 	function genImgFlip(memeText) {
-	var num = Math.random();
+	var num = myConsts.getSeed(false,1)[0];
 	var myEmbed = new Object();
 	var myImage = new Object();
 	var selectedMeme  = '';
@@ -950,6 +681,73 @@ async function genImgFlipDB(memeText, p, t)
 			}
 		})
 	}
+	
+function getUsage()
+{
+	return new Promise(function(myResolve, myRejection) {
+			const usageOptions = {
+				hostname: 'api.random.org',
+				path: '/json-rpc/4/invoke',
+				method: 'POST',
+				headers:
+				{
+					'Content-Type': 'application/json',
+					'User-Agent': myConsts.UA
+				}
+			};
+			var usageIn = {
+				"jsonrpc": "2.0",
+				"method": "getUsage",
+				"params": {
+					"apiKey": myConsts.RAND_ORG
+				},
+				"id": 1284
+			};
+			try {
+					const usageReq = https.request(usageOptions, (res) => {
+					res.setEncoding('utf8');
+					res.on('data', (chunk) => {
+						myConsts.logger("Random.org response: " + chunk);
+						let parsedUsage = JSON.parse(chunk);
+						if (typeof parsedUsage.result !== "undefined") {
+							myUsage = parsedUsage.result;
+							var usageEmbed = new MessageEmbed()
+							.setColor('#0099ff')
+							.setTitle('Random.org Usage')
+							.addFields(
+								{ name: 'Status', value: myUsage.status.toString(), inline: true },
+								{ name: 'Creation Time', value: myUsage.creationTime.toString(), inline: true },
+								{ name: 'Total Bits', value: myUsage.totalBits.toString(), inline: true },
+								{ name: 'Remaining Bits', value: myUsage.bitsLeft.toString(), inline: true },
+								{ name: 'Total Requests', value: myUsage.totalRequests.toString(), inline: true },
+								{ name: 'Remaining Requests', value: myUsage.requestsLeft.toString(), inline: true }
+							);
+							myResolve(usageEmbed);
+						}
+						else {
+							myRejection(chunk);
+							console.log("Error: " + chunk);
+						}
+						myResolve(myUsage);
+					});
+				  });
+				  usageReq.on('error', (e) => {
+					  myConsts.logger(`problem with request: ${e.message}`);
+					  myRejection(`problem with request: ${e.message}`);
+				  });
+				  var postString = JSON.stringify(usageIn);
+				  // Write data to request body
+				  usageReq.write(postString);
+				  //Since the request method is being used here for the post, we're calling end() manually on both request objects.
+				  usageReq.end();
+			  }
+			  catch (e)
+			  {
+				  myConsts.logger(e.message);
+				  myRejection(e.message);
+			  }
+	});
+}
 
 
 const prefixes = ['!','?'];
@@ -961,7 +759,7 @@ function validatePrefix(p) {
 function goodNightPromise() {
 	return new Promise(function(myResolve, myReject) {
 		var basePath = "gn/";
-		var num = Math.random();
+		var num = myConsts.getSeed(false,1)[0];
 		fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
 			try {
 				const filteredFiles = files
@@ -1059,17 +857,6 @@ client.on("messageCreate", async function(message) {
 		  message.channel.send("POLO!!");
 		  break;
 		  
-		  case 'sean':
-		  case 'daniel':
-		  case 'finn':
-		  case 'comfort':
-		  case 'chris':
-		  getTweetPromise(command).then(
-			function(resp) { message.channel.send({embeds: [resp]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
 		  case 'debug':
 		  //message.channel.send({embeds: [debugImg]});
 		  message.channel.send("<:doubt:878211423942082580>");
@@ -1123,7 +910,7 @@ client.on("messageCreate", async function(message) {
 					function(resp2) { message.channel.send({embeds: [resp2]}); },
 					function(err) { message.channel.send(err); }
 				);
-				console.log(resp);
+				//console.log(resp);
 			}
 		  );
 		  break;
@@ -1180,18 +967,18 @@ client.on("messageCreate", async function(message) {
 		  message.channel.send({embeds: [helpEmbed]});
 		  break;
 		  
+		  case 'usage':
+			  getUsage().then(
+			  function(output) { message.author.send({embeds: [output]}); },
+			  function(err) { message.author.send(JSON.stringify(err)); }
+			  );
+		  break;
+		  
 		  case 'guid':
 		  case 'uuid':
 			  message.author.send(uuidv4().toUpperCase());
 		  break;
-		  /***
-		  case 'svs':
-			svsPromise().then(
-				function(resp) { message.author.send(resp); },
-				function(err) { message.author.send(err); }
-			);
-		  break;
-		  ***/
+		  
 		  case 'dadjokes':
 		  dadJokesPromise().then(
 			function(jokes) { message.channel.send(jokes); },
@@ -1224,19 +1011,6 @@ client.on("messageCreate", async function(message) {
 		  );
 		  return;
 		  break;
-		  
-		  /***
-		  case "dalle":
-		  arg2Start = baseArg != null ? baseArg.indexOf(' ') : null;
-		  arg1 = baseArg.slice(0, arg2Start);
-		  arg2 = baseArg.slice(arg2Start + 1);
-		  message.reply("Generating...");
-		  genDalle(arg1, arg2).then(
-			function(imgs) { message.channel.send({files: imgs}); },
-			function(err) { message.channel.send("<@279483476527546368>\r\n" + err); }
-		  );
-		  break;
-		  ***/
 			  
 		  default:
 		  return;
