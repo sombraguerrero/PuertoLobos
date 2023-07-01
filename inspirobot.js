@@ -1,7 +1,6 @@
 'use strict';
 const https = require('https');
 const fs = require('fs');
-const FormData = require('form-data');
 const myConsts = require('./myConstants.js');
 // Stage Get request to retrieve data from either dad jokes or facts API
 function pickRemote(num) {
@@ -50,8 +49,8 @@ function pickRemote(num) {
 myConsts.getSeed(true,1)
 .then(
 	function(r) {
-		pickRemote(r * Number.MAX_SAFE_INTEGER);
+		pickRemote(r[0] * Number.MAX_SAFE_INTEGER);
 	},
 	function(anError) {
-		console.log(anError);
+		console.log(JSON.stringify(anError));
 	});
