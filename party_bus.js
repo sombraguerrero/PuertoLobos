@@ -21,12 +21,8 @@ const helpEmbed = new MessageEmbed()
 	.setColor('#0099ff')
 	.setTitle('Valid Commands')
 	.addFields(
-		{ name: 'pull <prompt, answer, key>', value: 'Pulls random writer\'s prompt, 8ball answer, or Great Silence response from database.', inline: true },
-		{ name: '8ball', value: 'Answers binary questions.', inline: true },
-		{ name: 'push <prompt, answer, greg>', value: 'Adds random writer\'s prompt, 8ball answer, or Great Silence response to database. Returns insert ID', inline: true },
 		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
 		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
-		{ name: 'height [tallest, shortest, average, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
 		{ name: 'guess m=<maximum guess> <your guess>', value: `Guess a positive integer between 0 and m!`, inline: true },
 		{ name: 'dadjokes n', value: 'Returns \'n\' dad jokes, 3 is default', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
@@ -35,8 +31,12 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
 		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true },
 		{ name: 'calc', value: 'Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)', inline: true },
-		{ name: 'bestie', value: 'Pulls a gif of Captain Spirit saying, \"So true, bestie!\"', inline: true },
-		{ name: 'flat', value: 'Pulls a gif of the flat hamster!', inline: true }
+		{ name: 'chuck, norris', value: 'CHUCK NORRRIIIIIIIIIIIIIIIIISSSS!!!', inline: true },
+		{ name: 'unsplash', value: 'Community-provided high-res images.', inline: true },
+		{ name: 'apod', value: 'NASA\'s Astronomy Picture of the Day', inline: true },
+		{ name: 'bird, birds, birb, birbs, borb, borbs', value: 'Image of random bird', inline: true },
+		{ name: 'cat, cats', value: 'Another random cat command', inline: true },
+		{ name: 'shibe, shibes', value: 'Random shibe doge', inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -54,43 +54,6 @@ var timeRequestOptions = {
 	}
 }
 
-async function postPrompt(msg, kind) {
-  let conn;
-  var promptResult;
-  try {
-	  var val = kind === 'greg' ? 'gregResponse' : kind;
-	conn = await pool.getConnection();
-	const res = await conn.query("INSERT INTO prompts (prompt, kind) values (?,?)", [msg, val]);
-	promptResult = res.insertId;
-	console.log(res);
-  } catch (err) {
-	myConsts.logger(err);
-  } finally {
-	if (conn)
-		conn.end();
-	return promptResult;
-  }
-}
-
-async function getPrompt(kind) {
-  let conn;
-  let promptOut;
-  try {
-	 var respType = kind == 'key' ? 'gregResponse' : kind;
-	conn = await pool.getConnection();
-	const row = await conn.query('SELECT * from prompts where kind = ? order by rand() limit 1', [respType]);
-	promptOut = row[0].prompt;
-	await conn.query("update prompts set dtUsed = now() where ID = ?", [row[0].ID]);
-
-  } catch (err) {
-	myConsts.logger(err);
-  } finally {
-	if (conn)
-		conn.end();
-	return promptOut;	
-  }
-}
-
 async function getImg(panels, boxes) {
   let conn;
   let promptOut;
@@ -106,6 +69,174 @@ async function getImg(panels, boxes) {
 		conn.end();
 	return promptOut;	
   }
+}
+
+function ChuckNorris() {
+	return new Promise(function(myResolve, myReject) {
+	const contentOptions = {
+			hostname: 'api.chucknorris.io',
+			path: '/jokes/random',
+			method: 'GET',
+			headers: {
+			  'Accept': 'application/json',
+			  'User-Agent': myConsts.UA
+			}
+		  };
+		  //console.log(contentOptions);
+
+	//Perform GET request with specified options. (Note that the aliased functions automatically call end() on the request object.)
+	const contentReq = https.request(contentOptions, (res) => {
+	  const { statusCode } = res;
+	  const contentType = res.headers['content-type'];
+
+	  // Stage POST request to Discord Webhook
+	  res.setEncoding('utf8');
+	  let rawData = '';
+	  res.on('data', (chunk) => { rawData += chunk; });
+	  res.on('end', () => {
+		  
+			  try
+			  {
+				  var parsedData = JSON.parse(rawData);
+				  myResolve(parsedData.value);
+			  }
+			  catch (e) 
+			  {
+				  myReject(`${res.statusCode}: ${res.statusMessage}`);
+			  }
+	  });
+	 });
+	//Using request method for the get too, so calling end() here too.
+	contentReq.end();
+	contentReq.on('error', (e) => {
+	  myReject(`Got error: ${e.message}`);
+	});
+	});
+}
+
+function NasaAPOD(num) {
+	return new Promise(function(myResolve, myReject) {
+		var startDate = new Date(1995,5,17); //per NASA spec, must be after 1995-06-16, the first day APOD was posted
+		var endDate = new Date();
+		var base_msec = startDate.getTime();
+		var modifier = endDate - startDate;
+		var random_msec = base_msec + (num % modifier);
+		var apodDate =  new Date(random_msec).toISOString().slice(0,10);
+	const contentOptions = {
+			hostname: 'api.nasa.gov',
+			path: `/planetary/apod?date=${apodDate}&api_key=${myConsts.NASA}`,
+			method: 'GET',
+			headers: {
+			  'Accept': 'application/json',
+			  'User-Agent': myConsts.UA
+			}
+		  };
+		  //console.log(contentOptions);
+
+	//Perform GET request with specified options. (Note that the aliased functions automatically call end() on the request object.)
+	const contentReq = https.request(contentOptions, (res) => {
+	  const { statusCode } = res;
+	  const contentType = res.headers['content-type'];
+
+	  // Stage POST request to Discord Webhook
+	  res.setEncoding('utf8');
+	  let rawData = '';
+	  res.on('data', (chunk) => { rawData += chunk; });
+	  res.on('end', () => {
+		try {
+			var parsedData = JSON.parse(rawData);
+			//console.log("My Content\r\n" + parsedData);
+			var myImage = new Object();
+			myImage.url = parsedData.url;
+			var myProvider = new Object();
+			myProvider.name = 'NASA';
+			myProvider.url = 'https://api.nasa.gov/';
+			var myAuthor = new Object();
+			myAuthor.name = parsedData.copyright;
+			var myFooter = new Object();
+			myFooter.text = 'Posted: ' + parsedData.date;
+			var myEmbed = new Object();
+			myEmbed.image = myImage;
+			myEmbed.author = myAuthor;
+			myEmbed.provider = myProvider;
+			myEmbed.footer = myFooter;
+			myEmbed.title = parsedData.title;
+			myEmbed.description = parsedData.explanation;
+			//myEmbed.color = 52479;
+			myEmbed.color =  num % 16777215// Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+			myResolve(myEmbed);
+		} catch (e) {
+			myReject(`${res.statusCode}: ${res.statusMessage}`);
+		}
+	});
+	});
+	//Using request method for the get too, so calling end() here too.
+	contentReq.end();
+	contentReq.on('error', (e) => {
+	  myReject(`Got error: ${e.message}`);
+	});
+	});
+}
+
+function Unsplash(num) {
+	return new Promise(function(myResolve, myReject) {
+	const contentOptions = {
+			hostname: 'api.unsplash.com',
+			path: "/photos/random",
+			method: 'GET',
+			headers: {
+			  'Accept': 'application/json',
+			  'User-Agent': myConsts.UA,
+			  'Authorization': `Client-ID ${myConsts.UNSPLASH}`
+			}
+		  };
+		  //console.log(contentOptions);
+
+	//Perform GET request with specified options. (Note that the aliased functions automatically call end() on the request object.)
+	const contentReq = https.request(contentOptions, (res) => {
+	  const { statusCode } = res;
+	  const contentType = res.headers['content-type'];
+
+	  // Stage POST request to Discord Webhook
+	  res.setEncoding('utf8');
+	  let rawData = '';
+	  res.on('data', (chunk) => { rawData += chunk; });
+	  res.on('end', () => {
+		try {
+			//console.log(rawData);
+			var parsedData = JSON.parse(rawData);
+			//console.log("My Content\r\n" + parsedData);
+			var myImage = new Object();
+			myImage.url = parsedData.urls.regular;
+			var myProvider = new Object();
+			myProvider.name = 'Unspash';
+			myProvider.url = parsedData.links.html;
+			var myAuthor = new Object();
+			myAuthor.name = parsedData.user.portfolio_url != null ? parsedData.user.name + " (" + parsedData.user.portfolio_url + ")" : parsedData.user.name;
+			var myFooter = new Object();
+			myFooter.text = parsedData.location.title != null ? 'Created: ' + parsedData.created_at + " (" + parsedData.location.title + ")" : 'Created: ' + parsedData.created_at;
+			
+			var myEmbed = new Object();
+			myEmbed.image = myImage;
+			myEmbed.provider = myProvider;
+			myEmbed.footer = myFooter;
+			myEmbed.author = myAuthor;
+			myEmbed.title = parsedData.alt_description;
+			myEmbed.description = parsedData.description;
+			//myEmbed.color = 16711808; // Discord spec requires hexadecimal codes converted to a literal decimal value (#ff0080)
+			myEmbed.color = parsedData.color != null ? parseInt(parsedData.color.substring(1), 16) : num % 16777215;
+			myResolve(myEmbed);
+		} catch (e) {
+		  myReject(`${res.statusCode}: ${res.statusMessage}`);
+		}
+	});
+	});
+	//Using request method for the get too, so calling end() here too.
+	contentReq.end();
+	contentReq.on('error', (e) => {
+	  myReject(`Got error: ${e.message}`);
+	});
+	});
 }
 
 function NumberGamePromise(m, g) {		
@@ -173,6 +304,44 @@ function inspiroPromise() {
 		inspiroReq.on('error', (err) => {
 			myConsts.logger(err);
 			myReject('InspiroBot doesn\'t seem to be in a sharing mood...');
+		});
+	});
+}
+
+function shibesPromise(animal) {
+	return new Promise(function(myResolve, myReject) {
+		const getOptions = {
+				hostname: 'shibe.online',
+				path: `/api/${animal}`,
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA
+				}
+			  };
+
+		//Perform GET request with specified options.
+		let imgData = '';
+		const shibesReq = https.request(getOptions, (addr_res) => {
+			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+				addr_res.on('end', () => {
+				var imgOut = JSON.parse(imgData);
+				var myImage = new Object();
+				myImage.url = imgOut[0];
+				var myEmbed = new Object();
+				myEmbed.image = myImage;
+				myEmbed.title = `Random ${animal.slice(0, -1)}`;
+				myEmbed.color = Math.floor(myConsts.getSeed(false,1)[0] * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
+				myResolve(myEmbed);
+			});
+			addr_res.on('error', (err) => {
+				myConsts.logger(err);
+				myReject('It seems Shibes doesn\'t want to talk right now...');
+			});
+		}).end();
+		
+		shibesReq.on('error', (err) => {
+			myConsts.logger(err);
+			myReject('Shibes doesn\'t seem to be in a sharing mood...');
 		});
 	});
 }
@@ -323,81 +492,6 @@ async function dadJokeDB(n)
 	}
 }
 
-function calcImperial(height) {
-	var inches = height / 2.54;
-	var feet = inches / 12;
-	var rem_inches = inches % 12;
-	return `${Math.trunc(feet)}'${Math.trunc(rem_inches)}"`;
-}
-
-async function processHeight(uname = '', h = 0)
-{
-	let conn;
-	let promptOut;
-	var row;
-	try
-	{
-		conn = await pool.getConnection();
-		if (h < 1 && uname != '')
-		{
-			switch (uname.toLowerCase())
-			{
-				case 'shortest':
-				row = await conn.query('SELECT * from pl_height order by metric_height asc limit 1');
-				promptOut = `${row[0].name} is the shortest person on the server at ${row[0].metric_height} centimetres or ${calcImperial(row[0].metric_height)}.`;
-				break;
-				
-				case 'tallest':
-				row = await conn.query('SELECT * from pl_height order by metric_height desc limit 1');
-				promptOut = `${row[0].name} is the tallest person on the server at ${row[0].metric_height} centimetres or ${calcImperial(row[0].metric_height)}.`;
-				break;
-					
-				case 'average':
-				row = await conn.query('SELECT AVG(metric_height) as \'average\' FROM pl_height');
-				promptOut = `Average height on the server is ${Math.round(row[0].average)} centimetres or ${calcImperial(row[0].average)}.`;
-				break;
-				
-				default:
-				row = await conn.query("SELECT * from pl_height where name = ?", [uname.toUpperCase()]);
-				promptOut = `${uname.toUpperCase()}'s height is ${row[0].metric_height} centimetres or ${calcImperial(row[0].metric_height)}.`;
-				break;
-			}
-		}
-		else if (h >= 1)
-		{
-			row = await conn.query("INSERT INTO pl_height (name, metric_height) VALUES (?, ?) ON DUPLICATE KEY UPDATE metric_height = VALUES(metric_height)", [uname.toUpperCase(), h]);
-			promptOut = `Height has been updated for ${uname.toUpperCase()}.`;
-		}
-		else if (uname == '')
-		{
-			let heightPromise = new Promise(async function(myResolve) {
-				var allHeights = new MessageEmbed()
-				.setTitle('Known server heights')
-				.setColor('#0099ff');
-				var rows = await conn.query('SELECT * from pl_height order by metric_height desc');
-				//console.log('Here ' + rows);
-				rows.forEach(async function(h) {
-					//allHeights.addField(h.name, `${h.metric_height} cm; ${calcImperial(h.metric_height)}`, true);
-					allHeights.addFields({ name: h.name, value: `${h.metric_height} cm; ${calcImperial(h.metric_height)}`, inline: true });
-				});
-				myResolve(allHeights);
-			});
-			promptOut = heightPromise;
-		}
-	}
-	catch (err)
-	{
-		myConsts.logger(err);
-		myReject(err);
-	}
-	finally
-	{
-		if (conn)
-			conn.end();
-		return promptOut;
-	}	
-}
-
 async function getTimePromise() {
 	let conn;
 	let promptOut;
@@ -447,13 +541,13 @@ function getTimePromise2(timeZone) {
 		{
 			res.on('data', (chunk) => { someData += chunk; });
 			res.on('end', () => {
-		//console.log("LOOK HERE FOR DATA: " + someData);
-			var myTime = JSON.parse(someData);
-			var timeConverted = myTime.resourceSets[0].resources[0].timeZone.convertedTime.localTime;
-			var zoneName = myTime.resourceSets[0].resources[0].timeZone.ianaTimeZoneId;
-		//myResolve({"dispName":timeInfo.timeZoneDisplayName, "ctime":timeInfo.localTime});
-			myResolve({"dispName":zoneName, "ctime":timeConverted});
-			});
+				//console.log("LOOK HERE FOR DATA: " + someData);
+				var myTime = JSON.parse(someData);
+				var timeConverted = myTime.resourceSets[0].resources[0].timeZone.convertedTime.localTime;
+				var zoneName = myTime.resourceSets[0].resources[0].timeZone.ianaTimeZoneId;
+				//myResolve({"dispName":timeInfo.timeZoneDisplayName, "ctime":timeInfo.localTime});
+				myResolve({"dispName":zoneName, "ctime":timeConverted});
+				});
 		}
 		catch(e)
 		{
@@ -799,64 +893,11 @@ function validatePrefix(p) {
 	return prefixes.indexOf(p);
 }
 
-function goodNightPromise() {
-	return new Promise(function(myResolve, myReject) {
-		var basePath = "gn/";
-		var num = myConsts.getSeed(false,1)[0];
-		fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
-			try {
-				const filteredFiles = files
-				.filter(dirent => dirent.isFile())
-				.map(dirent => dirent.name);
-				//filteredFiles.sort();
-				myResolve(fs.createReadStream(basePath + filteredFiles[Math.floor(num * filteredFiles.length)]));
-			}
-			catch(err) {
-				myConsts.logger(err.name + ": " + err.message + "\r\n");
-				myReject('Welp, can\'t get an image, so I\'ll just say it myself, good night!');
-			}
-		});
-	});
-}
-
-function getImage(img) {
-	return new Promise(function(myResolve, myReject)
-	{
-		try
-		{
-			myResolve(fs.createReadStream(img));
-		}
-		catch(err)
-		{
-			myConsts.logger(err.name + ": " + err.message + "\r\n");
-			myReject('Welp, I seem to be having some trouble getting that for you! :slight_frown:');
-		}
-	});
-}
-
 client.on("messageCreate", async function(message) {
 	try
 	{
 	  if (message.author.bot)
 	  {
-		  return;
-	  }
-	  
-	  else if (message.content.toLowerCase().startsWith('good morning'))
-	  {
-		  getImage('wakeup.gif').then(
-			function(imgStream) { message.channel.send({files: [imgStream]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  return;
-	  }
-	  
-	  else if (message.content.toLowerCase().startsWith('good night'))
-	  {
-		  goodNightPromise().then(
-			function(imgStream) { message.channel.send({files: [imgStream]}); },
-			function(err) { message.channel.send(err); }
-		  );
 		  return;
 	  }
 	  
@@ -876,21 +917,6 @@ client.on("messageCreate", async function(message) {
 	  
 	  switch (command.toLowerCase())
 	  {
-		  case "push":
-		  arg2Start = baseArg != null ? baseArg.indexOf(' ') : null;
-		  arg1 = baseArg.slice(0, arg2Start)
-		  arg2 = baseArg.slice(arg2Start + 1);
-		  if (arg1.toLowerCase() == 'greg' || arg1.toLowerCase() == 'prompt' || arg1.toLowerCase() == 'answer')
-		  {
-			  var msgTxt = await postPrompt(arg2, arg1.toLowerCase());
-			  message.channel.send(`I added the ${arg1} with ID ${msgTxt}.`);
-		  }
-		  break;
-		  
-		  case "pull":
-		   if (baseArg.toLowerCase() == 'key' || baseArg.toLowerCase() == 'prompt' || baseArg.toLowerCase() == 'answer')
-			  message.channel.send(await getPrompt(baseArg.toLowerCase()));
-		  break;
 		  
 		  case "8ball":
 		  message.reply(await getPrompt('answer'));
@@ -903,23 +929,6 @@ client.on("messageCreate", async function(message) {
 		  case 'debug':
 		  //message.channel.send({embeds: [debugImg]});
 		  message.channel.send("<:doubt:878211423942082580>");
-		  break;
-		  
-		  case 'height':
-		  args = baseArg != null ? baseArg.split(' ') : [];
-		  if (args.length == 1)
-			  message.channel.send(await processHeight(baseArg));
-		  else if (args.length == 2) {
-			  //myConsts.logger((`Args length is 2\r\nFirst arg: ${args[0]}\r\nSecond arg: ${args[1]}`));
-			  message.channel.send(await processHeight(args[0], parseInt(args[1])));
-		  }
-		  else
-		  {
-			  processHeight().then(
-				function(res) { message.channel.send({embeds: [res]}); },
-				function(err) { message.channel.send(err); }
-			  );
-		  }
 		  break;
 		  
 		  case 'guess':
@@ -1036,33 +1045,58 @@ client.on("messageCreate", async function(message) {
 		  **/
 		  break;
 		  
-		  case 'brad':
-		  //message.channel.send('ABAP - All Brads are :pig:');
-		  //message.channel.send('ABABAMFS - All Brads are  :sunglasses:');
-		  getImage('dance-party.gif').then(
-			function(imgStream) { message.channel.send({files: [imgStream]}); },
+		  case 'chuck':
+		  case 'norris':
+		  ChuckNorris().then(
+			function(norris) { message.channel.send(norris); },
 			function(err) { message.channel.send(err); }
 		  );
-		  return;
 		  break;
 		  
-		  case "bestie":
-		  getImage('bestie.gif').then(
-			function(imgStream) { message.channel.send({files: [imgStream]}); },
+		  case 'unsplash':
+		  Unsplash(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
+			function(img) { message.channel.send({embeds: [img]}); },
 			function(err) { message.channel.send(err); }
 		  );
-		  return;
 		  break;
 		  
-		  case "flat":
-		  getImage('flat.gif').then(
-			function(imgStream) { message.channel.send({files: [imgStream]}); },
+		  case 'apod':
+		  NasaAPOD(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
+			function(img) { message.channel.send({embeds: [img]}); },
 			function(err) { message.channel.send(err); }
 		  );
-		  return;
 		  break;
-			  
+		  
+		  case 'shibe':
+		  case 'shibes':
+		  shibesPromise('shibes').then(
+			function(img) { message.channel.send({embeds: [img]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'cat':
+		  case 'cats':
+		  shibesPromise('cats').then(
+			function(img) { message.channel.send({embeds: [img]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'bird':
+		  case 'birds':
+		  case 'birb':
+		  case 'birbs':
+		  case 'borb':
+		  case 'borbs':
+		  shibesPromise('birds').then(
+			function(img) { message.channel.send({embeds: [img]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
 		  default:
+		  console.log(command.toLowerCase());
 		  return;
 	  }
 	}
@@ -1080,4 +1114,4 @@ client.once('ready', () => {
 	console.log('Ready!');
 });
 
-client.login(myConsts.BOT_TOKEN);
+client.login(myConsts.PUDDING_TOKEN);
