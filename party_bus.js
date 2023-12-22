@@ -32,9 +32,10 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true },
 		{ name: 'calc', value: 'Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)', inline: true },
 		{ name: 'chuck, norris', value: 'CHUCK NORRRIIIIIIIIIIIIIIIIISSSS!!!', inline: true },
-		{ name: 'unsplash', value: 'Community-provided high-res images.', inline: true },
+		{ name: 'unsplash [query]', value: 'Community-provided high-res images. Random with no argument or will search for given query.', inline: true },
 		{ name: 'apod', value: 'NASA\'s Astronomy Picture of the Day', inline: true },
 		{ name: 'bird, birds, birb, birbs, borb, borbs', value: 'Image of random bird', inline: true },
+		{ name: 'dog, dogs', value: 'Random doge', inline: true },
 		{ name: 'cat, cats', value: 'Another random cat command', inline: true },
 		{ name: 'shibe, shibes', value: 'Random shibe doge', inline: true }
 	);
@@ -178,11 +179,12 @@ function NasaAPOD(num) {
 	});
 }
 
-function Unsplash(num) {
+function Unsplash(num, q = '') {
+	var query = q != '' ? `?query=${encodeURIComponent(q)}` : '';
 	return new Promise(function(myResolve, myReject) {
 	const contentOptions = {
 			hostname: 'api.unsplash.com',
-			path: "/photos/random",
+			path: `/photos/random${query}`,
 			method: 'GET',
 			headers: {
 			  'Accept': 'application/json',
@@ -342,6 +344,46 @@ function shibesPromise(animal) {
 		shibesReq.on('error', (err) => {
 			myConsts.logger(err);
 			myReject('Shibes doesn\'t seem to be in a sharing mood...');
+		});
+	});
+}
+
+function DogAsService(num) {
+	return new Promise(function(myResolve, myReject) {
+		const getOptions = {
+				hostname: 'api.thedogapi.com',
+				path: '/v1/images/search',
+				method: 'GET',
+				headers: {
+				  'User-Agent': myConsts.UA,
+				  'x-api-key': myConsts.DOG
+				}
+			  };
+
+		//Perform GET request with specified options.
+		let imgData = '';
+		const dogsRequest = https.request(getOptions, (addr_res) => {
+			addr_res.on('data', (dogData) => { imgData += dogData; });
+				addr_res.on('end', () => {
+					var parsedData = JSON.parse(imgData);
+					//console.log(imgData[0]);
+					var myImage = new Object();
+					myImage.url = parsedData[0].url;
+					//console.log(myImage);
+					var myEmbed = new Object();
+					myEmbed.image = myImage;
+					myEmbed.title = "Random Dog!";
+					myEmbed.color = Math.floor(num % 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+					myResolve(myEmbed);
+				});
+				addr_res.on('error', (err) => {
+				myConsts.logger(err);
+				myReject('It seems Dogs As A Service doesn\'t want to service us right now...');
+				});
+		}).end();
+		dogsRequest.on('error', (err) => {
+			myConsts.logger(err);
+			myReject('Dogs As A Service doesn\'t seem to be in a sharing mood...');
 		});
 	});
 }
@@ -1054,10 +1096,21 @@ client.on("messageCreate", async function(message) {
 		  break;
 		  
 		  case 'unsplash':
-		  Unsplash(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
-			function(img) { message.channel.send({embeds: [img]}); },
-			function(err) { message.channel.send(err); }
-		  );
+		  if (baseArg != null)
+		  {
+			  //console.log(baseArg);
+			  Unsplash(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER), baseArg).then(
+			  function(img) { message.channel.send({embeds: [img]}); },
+			  function(err) { message.channel.send(err); }
+			);
+		  }
+		  else
+		  {
+			  Unsplash(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
+			  function(img) { message.channel.send({embeds: [img]}); },
+			  function(err) { message.channel.send(err); }
+			);
+		  }
 		  break;
 		  
 		  case 'apod':
@@ -1090,6 +1143,14 @@ client.on("messageCreate", async function(message) {
 		  case 'borb':
 		  case 'borbs':
 		  shibesPromise('birds').then(
+			function(img) { message.channel.send({embeds: [img]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'dog':
+		  case 'dogs':
+		  DogAsService(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
 			function(img) { message.channel.send({embeds: [img]}); },
 			function(err) { message.channel.send(err); }
 		  );
