@@ -34,10 +34,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'chuck, norris', value: 'CHUCK NORRRIIIIIIIIIIIIIIIIISSSS!!!', inline: true },
 		{ name: 'unsplash [query]', value: 'Community-provided high-res images. Random with no argument or will search for given query.', inline: true },
 		{ name: 'apod', value: 'NASA\'s Astronomy Picture of the Day', inline: true },
-		{ name: 'bird, birds, birb, birbs, borb, borbs', value: 'Image of random bird', inline: true },
-		{ name: 'dog, dogs', value: 'Random doge', inline: true },
-		{ name: 'cat, cats', value: 'Another random cat command', inline: true },
-		{ name: 'shibe, shibes', value: 'Random shibe doge', inline: true }
+		{ name: 'art, artic', value: 'Random image/artwork from the Art Institute of Chicago.', inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -53,6 +50,58 @@ var timeRequestOptions = {
 	headers: {
 		'User-Agent': myConsts.UA
 	}
+}
+
+async function getArtWork() {
+  let conn;
+  let promptOut;
+  try {
+	conn = await pool.getConnection();
+	const row = await conn.query('CALL `getDiscordEmbed`()');
+	promptOut = row[0] != null || row.length == 1 ? row[0] : -1284;
+
+  } catch (err) {
+	myConsts.logger(err);
+  } finally {
+	if (conn)
+		conn.end();
+	return promptOut;	
+  }
+}
+
+async function genArtworkEmbed()
+{
+	return new Promise(async function(myResolve, myReject)
+	{
+		try
+		{
+			var artData = await getArtWork();
+			//console.log(artData)
+			var myImage = new Object();
+			myImage.url = artData[0].img_url;
+			var myProvider = new Object();
+			myProvider.name = 'Art Institute of Chicago';
+			myProvider.url = 'https://www.artic.edu';
+			var myAuthor = new Object();
+			myAuthor.name = artData[0].artist_display;
+			var myFooter = new Object();
+			myFooter.text = `${artData[0].date_display} - ${artData[0].place_of_origin}\r\n${artData[0].medium_display}`;
+			var myEmbed = new Object();
+			myEmbed.image = myImage;
+			myEmbed.author = myAuthor;
+			myEmbed.provider = myProvider;
+			myEmbed.footer = myFooter;
+			myEmbed.title = artData[0].artwork_title != '' ? artData[0].artwork_title : artData[0].img_title;
+			myEmbed.description = `${artData[0].description} \r\n${artData[0].inscriptions} `;
+			myEmbed.url = 'https://www.artic.edu';
+			myEmbed.color =  artData[0].discordColor // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+			myResolve(myEmbed);
+		}
+		catch (e)
+		{
+			myReject(e);
+		}
+	});
 }
 
 async function getImg(panels, boxes) {
@@ -1120,29 +1169,9 @@ client.on("messageCreate", async function(message) {
 		  );
 		  break;
 		  
-		  case 'shibe':
-		  case 'shibes':
-		  shibesPromise('shibes').then(
-			function(img) { message.channel.send({embeds: [img]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'cat':
-		  case 'cats':
-		  shibesPromise('cats').then(
-			function(img) { message.channel.send({embeds: [img]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'bird':
-		  case 'birds':
-		  case 'birb':
-		  case 'birbs':
-		  case 'borb':
-		  case 'borbs':
-		  shibesPromise('birds').then(
+		  case 'art':
+		  case 'artic':
+		  genArtworkEmbed().then(
 			function(img) { message.channel.send({embeds: [img]}); },
 			function(err) { message.channel.send(err); }
 		  );

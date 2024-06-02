@@ -43,7 +43,7 @@ function getKeyResponse() {
 
 function writeToDiscord(objIn, activity) {
 	var postString = JSON.stringify(objIn);
-		  const discordOptions = {
+		  var discordOptions = {
 			hostname: 'discord.com',
 			path: `/api/webhooks/${myConsts.PL_botspam}`,
 			method: 'POST',
@@ -52,7 +52,12 @@ function writeToDiscord(objIn, activity) {
 			  'Content-Length': Buffer.byteLength(postString)
 			}
 		  };
-
+		  
+		  if (process.argv.length == 3 && process.argv[2] == '--countdown')
+		  {
+			  discordOptions.path = `/api/webhooks/${myConsts.Countdown}`;
+		  }
+		  
 		  const discordReq = https.request(discordOptions, (res) => {
 			console.log(`STATUS: ${res.statusCode}`);
 			//console.log(`HEADERS: ${JSON.stringify(res.headers)}`);
@@ -148,7 +153,7 @@ function NatalieDee(comicDate) {
 	writeToDiscord(myRoot, `Natalie Dee (${comicDate})`);
 }
 
-function RandomColor(num) {
+function RandomColor(num, target) {
 	var colorInt = Math.floor(num % 16777215);
 	var hexColor = colorInt.toString(16);
 	
@@ -176,12 +181,12 @@ function RandomColor(num) {
 	//Perform GET request with specified options.
 	var formData = new FormData();
 	http.request(getOptions, (addr_res) => {
-		var imgOut = fs.createWriteStream("/volume1/main/webhooks/color.png");
+		var imgOut = fs.createWriteStream("/volume1/homes/bobertdos/webhooks/color.png");
 		addr_res.pipe(imgOut);
 		imgOut.on('finish', () => {
 				formData.append('content', `${myConsts.GREG} \r\nRandom Color Code!\r\n${textOutput}`);
-				formData.append('file', fs.createReadStream("/volume1/main/webhooks/color.png"), {filename: 'color.png'});
-				formData.submit(`https://discord.com/api/webhooks/${myConsts.PL_botspam}`);
+				formData.append('file', fs.createReadStream("/volume1/homes/bobertdos/webhooks/color.png"), {filename: 'color.png'});
+				formData.submit(`https://discord.com/api/webhooks/${target}`);
 		});
 	}).end();
 }
@@ -217,7 +222,7 @@ function InspiroBot(num) {
 	}).end();
 }
 
-function Face(num) {
+function Face(num, target) {
 	let now = Math.floor(new Date().getTime() / 1000.0);
 	let epoch = `${now}.jpg`;
 		  
@@ -234,14 +239,14 @@ function Face(num) {
 		};
 		let imgData = '';
 		https.request(getOptions, (res) => {
-			const filePath = fs.createWriteStream(`/volume1/main/webhooks/faces/${epoch}`);
+			const filePath = fs.createWriteStream(`/volume1/homes/bobertdos/webhooks/faces/${epoch}`);
 			res.pipe(filePath);
 			filePath.on('finish',() => {
 				filePath.close();
 				var formData = new FormData();
 				formData.append('content', myConsts.GREG +' This person does not exist!');
-				formData.append('file', fs.createReadStream(`/volume1/main/webhooks/faces/${epoch}`), { filename: epoch});
-				formData.submit(`https://discord.com/api/webhooks/${myConsts.PL_botspam}`);
+				formData.append('file', fs.createReadStream(`/volume1/homes/bobertdos/webhooks/faces/${epoch}`), { filename: epoch});
+				formData.submit(`https://discord.com/api/webhooks/${target}`);
 			});
 		}).end();
 	}
@@ -266,7 +271,7 @@ function Face(num) {
 					console.log(imgData);
 					if (faceData.generated) {
 						console.log("It has been generated!\r\n");
-						const filePath = fs.createWriteStream(`/volume1/main/webhooks/faces/${epoch}`);
+						const filePath = fs.createWriteStream(`/volume1/homes/bobertdos/webhooks/faces/${epoch}`);
 						const getFace = https.get(`https://this-person-does-not-exist.com/img/${faceData.name}`, function(response) {
 							response.pipe(filePath);
 						});
@@ -274,8 +279,8 @@ function Face(num) {
 							filePath.close();
 							var formData = new FormData();
 							formData.append('content', myConsts.GREG +' This person does not exist!');
-							formData.append('file', fs.createReadStream(`/volume1/main/webhooks/faces/${epoch}`), { filename: epoch});
-							formData.submit(`https://discord.com/api/webhooks/${myConsts.PL_botspam}`);
+							formData.append('file', fs.createReadStream(`/volume1/homes/bobertdos/webhooks/faces/${epoch}`), { filename: epoch});
+							formData.submit(`https://discord.com/api/webhooks/${target}`);
 						});
 					};
 				});
@@ -616,6 +621,40 @@ function JeopardyQ() {
 	});
 }
 
+function ShibesImages(num) {
+	const animals = ['shibes','cats','birds'];
+	var pickAnimal = animals[Math.floor(Math.random() * animals.length)];
+	const getOptions = {
+			hostname: 'shibe.online',
+			path: `/api/${pickAnimal}`,
+			method: 'GET',
+			headers: {
+			  'User-Agent': myConsts.UA
+			}
+		  };
+
+	//Perform GET request with specified options.
+	let imgData = '';
+	http.request(getOptions, (addr_res) => {
+		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
+			addr_res.on('end', () => {
+			
+			var myImage = new Object();
+			var elem = JSON.parse(imgData);
+			myImage.url = elem[0];
+			var myEmbed = new Object();
+			myEmbed.image = myImage;
+			myEmbed.title = `Random ${pickAnimal.substring(0, pickAnimal.length - 1)}`;
+			myEmbed.color = Math.floor(num % 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)  
+			var myRoot = new Object();
+			myRoot.embeds = new Array();
+			myRoot.embeds.push(myEmbed);
+			myRoot.content = myConsts.GREG;
+			writeToDiscord(myRoot, 'Shibes');
+		});
+	}).end();
+}
+
 function ThisOrThat() {
 	const contentOptions = {
 			hostname: 'itsthisforthat.com',
@@ -795,6 +834,69 @@ function NasaAPOD(apodDate, num) {
 	contentReq.on('error', (e) => {
 	  console.error(`Got error: ${e.message}`);
 	});
+}
+
+function getArtWork() {
+	 try
+	 {
+		 mariadb.createConnection({
+			 host: myConsts.conn.host, 
+			 user: myConsts.conn.user, 
+			 password: myConsts.conn.password,
+			 port: myConsts.conn.port,
+			 database: myConsts.conn.database,
+			 connectionLimit: myConsts.conn.connectionLimit
+		 })
+		.then(conn => {
+			conn.query('CALL `getDiscordEmbed`()')
+			.then(row => {
+				//console.log('Sending to gen function: ' + row[0])
+				writeToDiscord(genArtworkEmbed(row[0]), 'ARTIC');
+				//console.log(JSON.stringify(genArtworkEmbed(row[0])))
+				conn.end();
+			},
+			err => { console.log(err) }
+			);
+		});
+	}
+	catch(e)
+	{
+		myConsts.logger("not connected due to error: " + e);
+	}
+}
+
+function genArtworkEmbed(artDS)
+{
+	try
+		{
+			var myImage = new Object();
+			var myRoot = new Object();
+			console.log('A value: ' + artDS[0].discordColor)
+			myImage.url = artDS[0].img_url;
+			var myProvider = new Object();
+			myProvider.name = 'Art Institute of Chicago';
+			myProvider.url = 'https://www.artic.edu';
+			var myAuthor = new Object();
+			myAuthor.name = artDS[0].artist_display;
+			var myFooter = new Object();
+			myFooter.text = `${artDS[0].date_display} - ${artDS[0].place_of_origin}\r\n${artDS[0].medium_display}`;
+			var myEmbed = new Object();
+			myEmbed.image = myImage;
+			myEmbed.author = myAuthor;
+			myEmbed.provider = myProvider;
+			myEmbed.footer = myFooter;
+			myEmbed.title = artDS[0].artwork_title != '' ? artDS[0].artwork_title : artDS[0].img_title;
+			myEmbed.description = `${artDS[0].description} \r\n${artDS[0].inscriptions} `;
+			myEmbed.url = 'https://www.artic.edu';
+			myEmbed.color =  artDS[0].discordColor; // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+			myRoot.embeds = new Array();
+			myRoot.embeds.push(myEmbed);
+			return myRoot;
+		}
+		catch (e)
+		{
+			myConsts.logger(e);
+		}
 }
 
 function NasaMRover(num) {
@@ -1175,18 +1277,29 @@ function CallImgFlip(num) {
 
 myConsts.getSeed(true, 1)
 .then(
-	function(r)
+	async function(r)
 	{
+		var formDataTarget = "";
 		var val = Math.round(r[0] * Number.MAX_SAFE_INTEGER);
 		var task = -1;
-		if (process.argv.length == 3)
+		if (process.argv.length == 3 && process.argv[2] != "--countdown")
 			task = process.argv[2];
 		else if (process.argv.length == 4) {
 			task = process.argv[2];
 			val = parseInt(process.argv[3])
 		}
 		else
+		{
 			task = val;
+			if (process.argv[2] == '--countdown')
+			{
+				formDataTarget = myConsts.Countdown;
+			}
+			else
+			{
+				formDataTarget = myConsts.PL_botspam;
+			}
+		}
 		console.log(`Main value: ${val}\r\nTask value: ${task}`);
 		switch (task % 20)
 		{
@@ -1212,8 +1325,11 @@ myConsts.getSeed(true, 1)
 			break;
 			
 			case 4:
-			console.log('Trivia selected.\n');
-			JeopardyQ();
+			//console.log('Shibes selected.\n');
+			//JeopardyQ();
+			//ShibesImages(val);
+			console.log('Unsplash selected. (4)\n');
+			Unsplash(val);
 			break;
 			
 			case 5:
@@ -1248,7 +1364,7 @@ myConsts.getSeed(true, 1)
 			break;
 			
 			case 10:
-			console.log('Unsplash selected.\n');
+			console.log('Unsplash selected. (10)\n');
 			Unsplash(val);
 			break;
 			
@@ -1259,12 +1375,12 @@ myConsts.getSeed(true, 1)
 			
 			case 12:
 			console.log('Random color selected.\n');
-			RandomColor(val);
+			RandomColor(val, formDataTarget);
 			break;
 			
 			case 13:
-			console.log('Mars Rover photo selected.\n');
-			NasaMRover(val);
+			getArtWork();
+			console.log('ARTIC selected.');
 			break;
 			
 			case 14:
@@ -1294,7 +1410,7 @@ myConsts.getSeed(true, 1)
 			
 			case 19:
 			console.log('This person does not exist!');
-			Face(val);
+			Face(val, formDataTarget);
 			//CatAsService(val);
 			break;
 			

@@ -36,7 +36,8 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true },
 		{ name: 'calc', value: 'Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)', inline: true },
 		{ name: 'bestie', value: 'Pulls a gif of Captain Spirit saying, \"So true, bestie!\"', inline: true },
-		{ name: 'flat', value: 'Pulls a gif of the flat hamster!', inline: true }
+		{ name: 'flat', value: 'Pulls a gif of the flat hamster!', inline: true },
+		{ name: 'art, artic', value: 'Random image/artwork from the Art Institute of Chicago.', inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -89,6 +90,58 @@ async function getPrompt(kind) {
 		conn.end();
 	return promptOut;	
   }
+}
+
+async function getArtWork() {
+  let conn;
+  let promptOut;
+  try {
+	conn = await pool.getConnection();
+	const row = await conn.query('CALL `getDiscordEmbed`()');
+	promptOut = row[0] != null || row.length == 1 ? row[0] : -1284;
+
+  } catch (err) {
+	myConsts.logger(err);
+  } finally {
+	if (conn)
+		conn.end();
+	return promptOut;	
+  }
+}
+
+async function genArtworkEmbed()
+{
+	return new Promise(async function(myResolve, myReject)
+	{
+		try
+		{
+			var artData = await getArtWork();
+			//console.log(artData)
+			var myImage = new Object();
+			myImage.url = artData[0].img_url;
+			var myProvider = new Object();
+			myProvider.name = 'Art Institute of Chicago';
+			myProvider.url = 'https://www.artic.edu';
+			var myAuthor = new Object();
+			myAuthor.name = artData[0].artist_display;
+			var myFooter = new Object();
+			myFooter.text = `${artData[0].date_display} - ${artData[0].place_of_origin}\r\n${artData[0].medium_display}`;
+			var myEmbed = new Object();
+			myEmbed.image = myImage;
+			myEmbed.author = myAuthor;
+			myEmbed.provider = myProvider;
+			myEmbed.footer = myFooter;
+			myEmbed.title = artData[0].artwork_title != '' ? artData[0].artwork_title : artData[0].img_title;
+			myEmbed.description = `${artData[0].description} \r\n${artData[0].inscriptions} `;
+			myEmbed.url = 'https://www.artic.edu';
+			myEmbed.color =  artData[0].discordColor // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
+			myResolve(myEmbed);
+		}
+		catch (e)
+		{
+			myReject(e);
+		}
+	});
 }
 
 async function getImg(panels, boxes) {
@@ -1054,12 +1107,28 @@ client.on("messageCreate", async function(message) {
 		  return;
 		  break;
 		  
+		  case "counter":
+		  getImage('zero_days.jpg').then(
+			function(imgStream) { message.channel.send({files: [imgStream]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  return;
+		  break;
+		  
 		  case "flat":
 		  getImage('flat.gif').then(
 			function(imgStream) { message.channel.send({files: [imgStream]}); },
 			function(err) { message.channel.send(err); }
 		  );
 		  return;
+		  break;
+		  
+		  case 'art':
+		  case 'artic':
+		  genArtworkEmbed().then(
+			function(img) { message.channel.send({embeds: [img]}); },
+			function(err) { message.channel.send(err); }
+		  );
 		  break;
 			  
 		  default:
