@@ -621,38 +621,25 @@ function JeopardyQ() {
 	});
 }
 
-function ShibesImages(num) {
+function ShibesImages(target, rand) {
 	const animals = ['shibes','cats','birds'];
-	var pickAnimal = animals[Math.floor(Math.random() * animals.length)];
-	const getOptions = {
-			hostname: 'shibe.online',
-			path: `/api/${pickAnimal}`,
-			method: 'GET',
-			headers: {
-			  'User-Agent': myConsts.UA
-			}
-		  };
-
-	//Perform GET request with specified options.
-	let imgData = '';
-	http.request(getOptions, (addr_res) => {
-		addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
-			addr_res.on('end', () => {
-			
-			var myImage = new Object();
-			var elem = JSON.parse(imgData);
-			myImage.url = elem[0];
-			var myEmbed = new Object();
-			myEmbed.image = myImage;
-			myEmbed.title = `Random ${pickAnimal.substring(0, pickAnimal.length - 1)}`;
-			myEmbed.color = Math.floor(num % 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)  
-			var myRoot = new Object();
-			myRoot.embeds = new Array();
-			myRoot.embeds.push(myEmbed);
-			myRoot.content = myConsts.GREG;
-			writeToDiscord(myRoot, 'Shibes');
+	var pickAnimal = animals[Math.floor(rand * animals.length)];
+	var basePath = `prompt-bot/${pickAnimal}/`;
+	fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
+		const filteredFiles = files
+		.filter(dirent => dirent.isFile() && !(dirent.name.endsWith('.ini') || dirent.name.endsWith('.db') || dirent.name.endsWith('.webp')))
+		.map(dirent => dirent.name);
+		var selectedImg = filteredFiles[Math.floor(rand * filteredFiles.length)];
+		var fullPath = basePath + selectedImg;
+		//Perform post to Discord
+		var formData = new FormData();
+		formData.append('content', `Random ${pickAnimal}`);
+		formData.append('file', fs.createReadStream(fullPath), { filename: selectedImg});
+		formData.submit(`https://discordapp.com/api/webhooks/${target}`, (err, res) => {
+			console.log("[" + new Date().toLocaleString() + "]\r\nSelected Image: " + fullPath + "\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+			res.resume();
 		});
-	}).end();
+	});
 }
 
 function ThisOrThat() {
@@ -1279,7 +1266,7 @@ myConsts.getSeed(true, 1)
 .then(
 	async function(r)
 	{
-		var formDataTarget = "";
+		var formDataTarget = myConsts.PL_botspam;
 		var val = Math.round(r[0] * Number.MAX_SAFE_INTEGER);
 		var task = -1;
 		if (process.argv.length == 3 && process.argv[2] != "--countdown")
@@ -1294,10 +1281,6 @@ myConsts.getSeed(true, 1)
 			if (process.argv[2] == '--countdown')
 			{
 				formDataTarget = myConsts.Countdown;
-			}
-			else
-			{
-				formDataTarget = myConsts.PL_botspam;
 			}
 		}
 		console.log(`Main value: ${val}\r\nTask value: ${task}`);
@@ -1325,11 +1308,8 @@ myConsts.getSeed(true, 1)
 			break;
 			
 			case 4:
-			//console.log('Shibes selected.\n');
-			//JeopardyQ();
-			//ShibesImages(val);
-			console.log('Unsplash selected. (4)\n');
-			Unsplash(val);
+			console.log('Shibes selected.\n');
+			ShibesImages(formDataTarget, r);
 			break;
 			
 			case 5:

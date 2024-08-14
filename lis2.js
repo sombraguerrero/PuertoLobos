@@ -4,7 +4,7 @@ const fs = require('fs');
 const FormData = require('form-data');
 const myConsts = require('./myConstants.js');
 
-function Artwork()
+async function Artwork(target)
 {
 	var basePath = "/volume1/homes/bobertdos/Google_Drive/WD_lis-media/";
 	fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
@@ -17,9 +17,10 @@ function Artwork()
 					.map(dirent => dirent.name);
 					var selectedImg = filteredFiles[Math.floor(randomFloat[0] * filteredFiles.length)];
 					var fullPath = basePath + selectedImg;
-					if (selectedImg.toLowerCase().includes("blazkowicz"))
+					if (selectedImg.toLowerCase().includes("blazkowicz") && target == myConsts.PL)
 					{
 						Shame(fullPath, selectedImg);
+						return 0;
 					}
 					else
 					{
@@ -27,8 +28,9 @@ function Artwork()
 						var formData = new FormData();
 						formData.append('content', 'Random fan art: ' + selectedImg);
 						formData.append('file', fs.createReadStream(fullPath), { filename: selectedImg});
-						formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
+						formData.submit(`https://discordapp.com/api/webhooks/${target}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nSelected Image: " + fullPath + "\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 						});
 					}
 				},
@@ -41,10 +43,8 @@ function Artwork()
 			{
 				var errLog = fs.createWriteStream('error.log');
 				errLog.write(err.name + ": " + err.message + "\r\n");
-				return 1284;
 			}
 	});
-	return 0;
 }
 
 
@@ -67,6 +67,7 @@ function Shame(fpath, fname, s)
 					formData.append('content','Looking Good for a dead guy John 😆🤣');
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -76,6 +77,7 @@ function Shame(fpath, fname, s)
 					formData.append('content','Posting artwork?? He\'s supposed to be dead!!!');
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -85,6 +87,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'shame.gif'), { filename: 'shame.gif'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -95,6 +98,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'jb_death_cert.jpg'), { filename: 'jb_death_cert.jpg'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -104,6 +108,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'cone.gif'), { filename: 'cone.gif'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -113,6 +118,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'john-krasinski-oh-no.gif'), { filename: 'john-krasinski-oh-no.gif'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -122,6 +128,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'feel_shame.gif'), { filename: 'feel_shame.gif'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -131,6 +138,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'hot-fuzz.gif'), { filename: 'hot-fuzz.gif'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -140,6 +148,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'shame-on-you.gif'), { filename: 'shame-on-you.gif'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -149,6 +158,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'mushu-mulan.gif'), { filename: 'mushu-mulan.gif'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -158,6 +168,7 @@ function Shame(fpath, fname, s)
 					formData.append('file[1]', fs.createReadStream(imgPath + 'mulan-matchmaker.gif'), { filename: 'mulan-matchmaker.gif'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -167,6 +178,7 @@ function Shame(fpath, fname, s)
 					formData.append('content','Honestly, at this point I think that man could post a pic of a ||prolapsed anus|| and his stans would fawn');
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 					
@@ -177,6 +189,7 @@ function Shame(fpath, fname, s)
 					formData.append('content','The way this man has fallen SO HARD');
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 							console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
+							res.resume();
 					});
 					break;
 				}
@@ -189,6 +202,7 @@ function Shame(fpath, fname, s)
 			errLog.write(err.name + ": " + err.message + "\r\n");
 		}
 }
-return Artwork();
+Artwork(myConsts.WD);
+Artwork(myConsts.PL);
 
 //Shame('/volume1/homes/bobertdos/Google_Drive/WD_lis-media/JohnsonBlazkowicz (53).jpg','JohnsonBlazkowicz (53).jpg');

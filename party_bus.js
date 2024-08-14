@@ -359,41 +359,36 @@ function inspiroPromise() {
 	});
 }
 
-function shibesPromise(animal) {
-	return new Promise(function(myResolve, myReject) {
-		const getOptions = {
-				hostname: 'shibe.online',
-				path: `/api/${animal}`,
-				method: 'GET',
-				headers: {
-				  'User-Agent': myConsts.UA
-				}
-			  };
-
-		//Perform GET request with specified options.
-		let imgData = '';
-		const shibesReq = https.request(getOptions, (addr_res) => {
-			addr_res.on('data', (imgAddr) => { imgData += imgAddr; });
-				addr_res.on('end', () => {
-				var imgOut = JSON.parse(imgData);
-				var myImage = new Object();
-				myImage.url = imgOut[0];
-				var myEmbed = new Object();
-				myEmbed.image = myImage;
-				myEmbed.title = `Random ${animal.slice(0, -1)}`;
-				myEmbed.color = Math.floor(myConsts.getSeed(false,1)[0] * 16777215); // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white) 
-				myResolve(myEmbed);
-			});
-			addr_res.on('error', (err) => {
-				myConsts.logger(err);
-				myReject('It seems Shibes doesn\'t want to talk right now...');
-			});
-		}).end();
-		
-		shibesReq.on('error', (err) => {
-			myConsts.logger(err);
-			myReject('Shibes doesn\'t seem to be in a sharing mood...');
-		});
+function shibesPromise(animal)
+{
+	return new Promise(function(myResolve, myReject)
+	{
+		try
+		{
+			myConsts.getSeed(true, 1)
+			.then(
+				function(randomFloat)
+				{
+					var basePath = `${animal}/`;
+					fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
+						const filteredFiles = files
+						.filter(dirent => dirent.isFile() && !(dirent.name.endsWith('.ini') || dirent.name.endsWith('.db') || dirent.name.endsWith('.webp')))
+						.map(dirent => dirent.name);
+						var selectedImg = filteredFiles[Math.floor(randomFloat[0] * filteredFiles.length)];
+						var fullPath = basePath + selectedImg;
+						//Perform post to Discord
+						myResolve(fs.createReadStream(fullPath));
+					});
+				},
+				function(anError)
+				{
+					myReject(anError);
+				});
+		}
+		catch(err)
+		{
+			myReject(err);
+		}
 	});
 }
 
@@ -1134,6 +1129,34 @@ client.on("messageCreate", async function(message) {
 			function(err) { message.channel.send(err); }
 		  );
 		  **/
+		  break;
+		  
+		  case 'shibe':
+		  case 'shibes':
+		  shibesPromise('shibes').then(
+			function(img) { message.channel.send({files: [img] }); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'cat':
+		  case 'cats':
+		  shibesPromise('cats').then(
+			function(img) { message.channel.send({files: [img] }); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'bird':
+		  case 'birds':
+		  case 'birb':
+		  case 'birbs':
+		  case 'borb':
+		  case 'borbs':
+		  shibesPromise('birds').then(
+			function(img) { message.channel.send({files: [img] }); },
+			function(err) { message.channel.send(err); }
+		  );
 		  break;
 		  
 		  case 'chuck':
