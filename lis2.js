@@ -103,6 +103,6 @@ function Shame(fpath, fname, s)
 	}
 }
 
-//Artwork(myConsts.PL);
-Artwork(myConsts.WD);
+Artwork(myConsts.PL);
+//Artwork(myConsts.WD);
 //Shame('/volume1/homes/bobertdos/Google_Drive/WD_lis-media/JohnsonBlazkowicz (53).jpg','JohnsonBlazkowicz (53).jpg');
