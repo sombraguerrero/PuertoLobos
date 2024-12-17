@@ -66,7 +66,7 @@ function Shame(fpath, fname, s)
 				if (row[0].id == 100)
 				{
 					formData.append('file[0]', fs.createReadStream(fpath), { filename: fname});
-					formData.append('content', row[0].quote);
+					formData.append('content', `${row[0].quote}\n -- ${row[0].author}`);
 					formData.append('file[1]', fs.createReadStream(imgPath + 'jb_death_cert.jpg'), { filename: 'jb_death_cert.jpg'});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 						console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
@@ -87,7 +87,7 @@ function Shame(fpath, fname, s)
 				else
 				{
 					formData.append('file', fs.createReadStream(fpath), { filename: fname});
-					formData.append('content',row[0].quote);
+					formData.append('content',`${row[0].quote}\n -- ${row[0].author}`);
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 						console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
 						res.resume();
@@ -103,6 +103,6 @@ function Shame(fpath, fname, s)
 	}
 }
 
-Artwork(myConsts.PL);
+//Artwork(myConsts.PL);
 //Artwork(myConsts.WD);
-//Shame('/volume1/homes/bobertdos/Google_Drive/WD_lis-media/JohnsonBlazkowicz (53).jpg','JohnsonBlazkowicz (53).jpg');
+Shame('/volume1/homes/bobertdos/Google_Drive/WD_lis-media/JohnsonBlazkowicz (53).jpg','JohnsonBlazkowicz (53).jpg');
