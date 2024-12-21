@@ -63,11 +63,11 @@ function Shame(fpath, fname, s)
 		}).then(conn => {
 			conn.query('SELECT * from shame_demotivation order by rand() limit 1').then(row => {
 				var formData = new FormData();
-				if (row[0].id == 100)
+				if (row[0].shame_img != '')
 				{
 					formData.append('file[0]', fs.createReadStream(fpath), { filename: fname});
 					formData.append('content', `${row[0].quote}\n -- ${row[0].author}`);
-					formData.append('file[1]', fs.createReadStream(imgPath + 'jb_death_cert.jpg'), { filename: 'jb_death_cert.jpg'});
+					formData.append('file[1]', fs.createReadStream(imgPath + row[0].shame_img), { filename: row[0].shame_img});
 					formData.submit(`https://discordapp.com/api/webhooks/${myConsts.PL}`, (err, res) => {
 						console.log("[" + new Date().toLocaleString() + "]\r\nShame for " + fname + "!!!\r\nResponse code: " + res.statusCode + "\r\nErrors: " + err + "\r\n");
 						res.resume();
