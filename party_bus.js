@@ -1282,13 +1282,6 @@ client.on("messageCreate", async function(message) {
 		  );
 		  break;
 		  
-		  case 'duckroll':
-		  EmojiPromise('🦆').then(
-			function(ducks) { message.reply(ducks); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
 		  case 'beastroll':
 		  BeastPromise().then(
 			function(beasts) { message.reply(beasts); },
