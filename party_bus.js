@@ -34,7 +34,16 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'chuck, norris', value: 'CHUCK NORRRIIIIIIIIIIIIIIIIISSSS!!!', inline: true },
 		{ name: 'unsplash [query]', value: 'Community-provided high-res images. Random with no argument or will search for given query.', inline: true },
 		{ name: 'apod', value: 'NASA\'s Astronomy Picture of the Day', inline: true },
-		{ name: 'art, artic', value: 'Random image/artwork from the Art Institute of Chicago.', inline: true }
+		{ name: 'art, artic', value: 'Random image/artwork from the Art Institute of Chicago.', inline: true },
+		{ name: 'bird, birds, birb, birbs, borb, borbs', value: 'Images of birds!', inline: true },
+		{ name: 'cat, cats', value: 'Images of cats!', inline: true },
+		{ name: 'dog, dogs, doge', value: 'Images of dogs!', inline: true },
+		{ name: 'duckroll', value: 'Roll for ducks! (D20)', inline: true },
+		{ name: 'catroll', value: 'Roll for cats! (D20)', inline: true },
+		{ name: 'beastroll', value: 'Roll for a random animal! (D20)', inline: true },
+		{ name: 'shibe, shibes', value: 'Images of Shibe Inu dogs!', inline: true },
+		{ name: 'shibe, shibes', value: 'Images of Shibe Inu dogs!', inline: true }
+		
 	);
 	
 const debugImg = new MessageEmbed()
@@ -310,6 +319,56 @@ function NumberGamePromise(m, g) {
 							myResolve(`You were close! It was ${mySeed}!`);
 						else if (g < lowerBound || g > upperBound)
 							myResolve(`Better luck next time! It was ${mySeed}!`);
+					},
+					function(anError) { console.log(anError); });
+				}
+				catch (e)
+				{
+					myConsts.logger(e.message);
+					myReject(e.message);
+				}
+		});
+}
+
+function EmojiPromise(emoji) {		
+		return new Promise(function(myResolve, myReject) {
+			try {
+				myConsts.getInt(1)
+				.then(
+					function(seed)
+					{
+						var duck = "";
+						for (d = 1; d <= seed; d++)
+						{
+							duck += emoji;
+						}
+						myResolve(duck);
+					},
+					function(anError) { console.log(anError); });
+				}
+				catch (e)
+				{
+					myConsts.logger(e.message);
+					myReject(e.message);
+				}
+		});
+}
+
+function BeastPromise() {		
+		return new Promise(function(myResolve, myReject) {
+			try {
+				myConsts.getInt(2)
+				.then(
+					function(vals)
+					{
+						var beasts = ['🐈','🐕','🐉','🐑','🦀','🐳','🦘'];
+						var beast_sel = beasts[vals[0] % beasts.length];
+						var beast = '';
+						for (d = 1; d <= vals[1]; d++)
+						{
+							beast += beast_sel;
+						}
+						myResolve(beast);
 					},
 					function(anError) { console.log(anError); });
 				}
@@ -1202,8 +1261,37 @@ client.on("messageCreate", async function(message) {
 		  
 		  case 'dog':
 		  case 'dogs':
+		  case 'doge':
 		  DogAsService(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
 			function(img) { message.channel.send({embeds: [img]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'catroll':
+		  EmojiPromise('🐈').then(
+			function(ducks) { message.reply(ducks); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'duckroll':
+		  EmojiPromise('🦆').then(
+			function(ducks) { message.reply(ducks); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'duckroll':
+		  EmojiPromise('🦆').then(
+			function(ducks) { message.reply(ducks); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'beastroll':
+		  BeastPromise().then(
+			function(beasts) { message.reply(beasts); },
 			function(err) { message.channel.send(err); }
 		  );
 		  break;
