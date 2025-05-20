@@ -28,6 +28,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
 		{ name: 'height [tallest, shortest, average, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
 		{ name: 'guess m=<maximum guess> <your guess>', value: `Guess a positive integer between 0 and m!`, inline: true },
+		{ name: 'rand <q>', value: 'Generate q random integers.', inline: true },
 		{ name: 'dadjokes n', value: 'Returns \'n\' dad jokes, 3 is default', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
 		{ name: 'time', value: 'Converts the current UTC time to local time in multiple time zones.', inline: true },
@@ -998,6 +999,18 @@ client.on("messageCreate", async function(message) {
 		 }
 		  break;
 		  
+		  case 'rand':
+		  args = baseArg != null ? baseArg.split(' ') : [];
+		  if (args.length == 1)
+		  {
+			  var qty = parseInt(args[0]);
+			  myConsts.getInt(qty).then(
+				function(resp) { message.channel.send(resp.join()); },
+				function(err) { message.channel.send(err); }
+			  );
+		  }
+		 break;
+		  
 		  case 'imgflip':
 		  CallImgFlip().then(
 			function(resp)
@@ -1093,6 +1106,16 @@ client.on("messageCreate", async function(message) {
 		  //message.channel.send('ABAP - All Brads are :pig:');
 		  //message.channel.send('ABABAMFS - All Brads are  :sunglasses:');
 		  getImage('dance-party.gif').then(
+			function(imgStream) { message.channel.send({files: [imgStream]}); },
+			function(err) { message.channel.send(err); }
+		  );
+		  return;
+		  break;
+		  
+		  case 'extrabrad':
+		  //message.channel.send('ABAP - All Brads are :pig:');
+		  //message.channel.send('ABABAMFS - All Brads are  :sunglasses:');
+		  getImage('extrabrad.gif').then(
 			function(imgStream) { message.channel.send({files: [imgStream]}); },
 			function(err) { message.channel.send(err); }
 		  );
