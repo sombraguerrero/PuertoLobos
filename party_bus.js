@@ -5,7 +5,7 @@ const myConsts = require('./myConstants.js');
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
-//const qs = require('querystring');
+const { DateTime } = require('luxon');
 const pool = mariadb.createPool({
      host: myConsts.conn.host, 
      user: myConsts.conn.user, 
@@ -22,7 +22,7 @@ const helpEmbed = new MessageEmbed()
 	.setTitle('Valid Commands')
 	.addFields(
 		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
-		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
+		{ name: 'inspiro, insprio, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
 		{ name: 'guess m=<maximum guess> <your guess>', value: `Guess a positive integer between 0 and m!`, inline: true },
 		{ name: 'dadjokes n', value: 'Returns \'n\' dad jokes, 3 is default', inline: true },
 		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
@@ -35,6 +35,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: 'unsplash [query]', value: 'Community-provided high-res images. Random with no argument or will search for given query.', inline: true },
 		{ name: 'apod', value: 'NASA\'s Astronomy Picture of the Day', inline: true },
 		{ name: 'art, artic', value: 'Random image/artwork from the Art Institute of Chicago.', inline: true },
+		{ name: 'arctic', value: 'Random images of Arctic creatures', inline: true },
 		{ name: 'bird, birds, birb, birbs, borb, borbs', value: 'Images of birds!', inline: true },
 		{ name: 'cat, cats', value: 'Images of cats!', inline: true },
 		{ name: 'dog, dogs, doge', value: 'Images of dogs!', inline: true },
@@ -361,7 +362,7 @@ function BeastPromise() {
 				.then(
 					function(vals)
 					{
-						var beasts = ['🐈','🐕','🐉','🐑','🦀','🐳','🦘'];
+						var beasts = ['🐈','🐕','🐉','🐑','🦀','🐳','🦘','🐟'];
 						var beast_sel = beasts[vals[0] % beasts.length];
 						var beast = '';
 						for (d = 1; d <= vals[1]; d++)
@@ -429,6 +430,39 @@ function shibesPromise(animal)
 				function(randomFloat)
 				{
 					var basePath = `${animal}/`;
+					fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
+						const filteredFiles = files
+						.filter(dirent => dirent.isFile() && !(dirent.name.endsWith('.ini') || dirent.name.endsWith('.db') || dirent.name.endsWith('.webp')))
+						.map(dirent => dirent.name);
+						var selectedImg = filteredFiles[Math.floor(randomFloat[0] * filteredFiles.length)];
+						var fullPath = basePath + selectedImg;
+						//Perform post to Discord
+						myResolve(fs.createReadStream(fullPath));
+					});
+				},
+				function(anError)
+				{
+					myReject(anError);
+				});
+		}
+		catch(err)
+		{
+			myReject(err);
+		}
+	});
+}
+
+function arcticPromise()
+{
+	return new Promise(function(myResolve, myReject)
+	{
+		try
+		{
+			myConsts.getSeed(true, 1)
+			.then(
+				function(randomFloat)
+				{
+					var basePath = 'arctic/';
 					fs.readdir(basePath, { withFileTypes: true }, (err, files) => {
 						const filteredFiles = files
 						.filter(dirent => dirent.isFile() && !(dirent.name.endsWith('.ini') || dirent.name.endsWith('.db') || dirent.name.endsWith('.webp')))
@@ -672,36 +706,18 @@ async function getTimePromise() {
 	}	
 }
 
-//This function will return a single promise.
-//An array will be built via a loop to then pass to Promise.all
-//The resolution of Promise.all will build the embed
-function getTimePromise2(timeZone) {
-	var now = new Date().toISOString().split('.')[0]+'Z';
-	//console.log(now);
+//Using Luxon to perform local time conversions based on zone list
+function getTimePromise2(ianaTimeZones) {
 	return new Promise(function(myResolve, myReject) {
-		timeRequestOptions.path = `/REST/v1/timezone/convert/?desttz=${timeZone}&includeDstRules=true&datetime=${now}&o=json&key=${myConsts.BING}`;
-		var timeReq = https.request(timeRequestOptions, (res) => {
-		var someData = '';
-		try
-		{
-			res.on('data', (chunk) => { someData += chunk; });
-			res.on('end', () => {
-				//console.log("LOOK HERE FOR DATA: " + someData);
-				var myTime = JSON.parse(someData);
-				var timeConverted = myTime.resourceSets[0].resources[0].timeZone.convertedTime.localTime;
-				var zoneName = myTime.resourceSets[0].resources[0].timeZone.ianaTimeZoneId;
-				//myResolve({"dispName":timeInfo.timeZoneDisplayName, "ctime":timeInfo.localTime});
-				myResolve({"dispName":zoneName, "ctime":timeConverted});
-				});
-		}
-		catch(e)
-		{
-			myReject(`data: ${someData}\r\n${e}`);
-		}
-		res.on('error', (err) => {
-			myReject(err);
-		});
-		}).end();
+		const localTimes = ianaTimeZones.map((timeZone) => ({
+		timeZone,
+		localTime: DateTime.now().setZone(timeZone).toFormat("yyyy-MM-dd HH:mm:ss")
+	}));
+	//console.log(localTimes)
+		if (localTimes.length > 0)
+			myResolve(localTimes);
+		else
+			myReject("Map of local times is empty!");
 	});
 }
 
@@ -1130,24 +1146,19 @@ client.on("messageCreate", async function(message) {
 			  
 		  case 'time':
 		  var allTimes = new MessageEmbed()
-				.setTitle('The current time is:')
-				.setColor('#0099ff');
-			  BuildTimePromises().then(
-				function(times) {
-					Promise.all(times).then(
-						function (myTimes) {
-							//console.log(myTimes);
-							myTimes.forEach(function(time) {
-								//allTimes.addField(time.dispName, time.ctime, true);
-								allTimes.addFields({ name: time.dispName, value: time.ctime, inline: true });
-							});
-							message.channel.send({embeds: [allTimes]});
-						});
-				},
-				function(err) { myConsts.logger(err)});
-			  break;
+		  .setTitle('The current time is:')
+		  .setColor('#0099ff');
+		  getTimePromise2(myConsts.myTZ).then(
+			function(myTimes)
+			{
+				myTimes.forEach((tz) => { allTimes.addFields({ name: tz.timeZone, value: tz.localTime, inline: true }); });
+				message.channel.send({embeds: [allTimes]});
+			},
+			function(err) { message.channel.send(err); });
+		break;
 		  
 		  case 'inspiro':
+		  case 'insprio':
 		  case 'inspirobot':
 		  inspiroPromise().then(
 			function(img) { message.channel.send({embeds: [img]}); },
@@ -1213,6 +1224,13 @@ client.on("messageCreate", async function(message) {
 		  case 'borb':
 		  case 'borbs':
 		  shibesPromise('birds').then(
+			function(img) { message.channel.send({files: [img] }); },
+			function(err) { message.channel.send(err); }
+		  );
+		  break;
+		  
+		  case 'arctic':
+		  arcticPromise().then(
 			function(img) { message.channel.send({files: [img] }); },
 			function(err) { message.channel.send(err); }
 		  );

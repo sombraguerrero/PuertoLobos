@@ -5,6 +5,8 @@ const myConsts = require('./myConstants.js');
 const https = require('https');
 const http = require('http');
 const fs = require('fs');
+const { DateTime } = require('luxon');
+
 //const qs = require('querystring');
 const pool = mariadb.createPool({
      host: myConsts.conn.host, 
@@ -487,53 +489,18 @@ async function getTimePromise() {
 	}	
 }
 
-//This function will return a single promise.
-//An array will be built via a loop to then pass to Promise.all
-//The resolution of Promise.all will build the embed
-function getTimePromise2(timeZone) {
-	var now = new Date().toISOString().split('.')[0]+'Z';
-	//console.log(now);
+//Using Luxon to perform local time conversions based on zone list
+function getTimePromise2(ianaTimeZones) {
 	return new Promise(function(myResolve, myReject) {
-		timeRequestOptions.path = `/REST/v1/timezone/convert/?desttz=${timeZone}&includeDstRules=true&datetime=${now}&o=json&key=${myConsts.BING}`;
-		var timeReq = https.request(timeRequestOptions, (res) => {
-		var someData = '';
-		try
-		{
-			res.on('data', (chunk) => { someData += chunk; });
-			res.on('end', () => {
-		//console.log("LOOK HERE FOR DATA: " + someData);
-			var myTime = JSON.parse(someData);
-			var timeConverted = myTime.resourceSets[0].resources[0].timeZone.convertedTime.localTime;
-			var zoneName = myTime.resourceSets[0].resources[0].timeZone.ianaTimeZoneId;
-		//myResolve({"dispName":timeInfo.timeZoneDisplayName, "ctime":timeInfo.localTime});
-			myResolve({"dispName":zoneName, "ctime":timeConverted});
-			});
-		}
-		catch(e)
-		{
-			myReject(`data: ${someData}\r\n${e}`);
-		}
-		res.on('error', (err) => {
-			myReject(err);
-		});
-		}).end();
-	});
-}
-
-function BuildTimePromises() {
-	var myPromises = new Array();
-	return new Promise(function(passingTime, myReject) {
-		try
-		{
-			myConsts.myTZ.forEach(function(time) {
-				myPromises.push(getTimePromise2(time));
-			});
-			passingTime(myPromises);
-		}
-		catch (e)
-		{
-			myReject(e);
-		}
+		const localTimes = ianaTimeZones.map((timeZone) => ({
+		timeZone,
+		localTime: DateTime.now().setZone(timeZone).toFormat("yyyy-MM-dd HH:mm:ss")
+	}));
+	//console.log(localTimes)
+		if (localTimes.length > 0)
+			myResolve(localTimes);
+		else
+			myReject("Map of local times is empty!");
 	});
 }
 
@@ -1039,25 +1006,19 @@ client.on("messageCreate", async function(message) {
 			  function(err) { message.channel.send(err); }
 			);
 		  break;
-			  
+		  
 		  case 'time':
 		  var allTimes = new MessageEmbed()
-				.setTitle('The current time is:')
-				.setColor('#0099ff');
-			  BuildTimePromises().then(
-				function(times) {
-					Promise.all(times).then(
-						function (myTimes) {
-							//console.log(myTimes);
-							myTimes.forEach(function(time) {
-								//allTimes.addField(time.dispName, time.ctime, true);
-								allTimes.addFields({ name: time.dispName, value: time.ctime, inline: true });
-							});
-							message.channel.send({embeds: [allTimes]});
-						});
-				},
-				function(err) { myConsts.logger(err)});
-			  break;
+		  .setTitle('The current time is:')
+		  .setColor('#0099ff');
+		  getTimePromise2(myConsts.myTZ).then(
+			function(myTimes)
+			{
+				myTimes.forEach((tz) => { allTimes.addFields({ name: tz.timeZone, value: tz.localTime, inline: true }); });
+				message.channel.send({embeds: [allTimes]});
+			},
+			function(err) { message.channel.send(err); });
+		break;
 		  
 		  case 'inspiro':
 		  case 'inspirobot':
