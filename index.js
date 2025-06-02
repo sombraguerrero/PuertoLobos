@@ -23,24 +23,24 @@ const helpEmbed = new MessageEmbed()
 	.setColor('#0099ff')
 	.setTitle('Valid Commands')
 	.addFields(
-		{ name: 'pull <prompt, answer, key>', value: 'Pulls random writer\'s prompt, 8ball answer, or Great Silence response from database.', inline: true },
-		{ name: '8ball', value: 'Answers binary questions.', inline: true },
-		{ name: 'push <prompt, answer, greg>', value: 'Adds random writer\'s prompt, 8ball answer, or Great Silence response to database. Returns insert ID', inline: true },
-		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
-		{ name: 'inspiro, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
-		{ name: 'height [tallest, shortest, average, nickname] [heightValue (cm)]', value: 'Query and update heights of server members. Command alone returns all', inline: true },
-		{ name: 'guess m=<maximum guess> <your guess>', value: `Guess a positive integer between 0 and m!`, inline: true },
-		{ name: 'rand <q>', value: 'Generate q random integers.', inline: true },
-		{ name: 'dadjokes n', value: 'Returns \'n\' dad jokes, 3 is default', inline: true },
-		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
-		{ name: 'time', value: 'Converts the current UTC time to local time in multiple time zones.', inline: true },
-		{ name: 'imgflip', value: 'Generates a single-image meme via ImgFlip using completely random text.', inline: true },
-		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
-		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true },
-		{ name: 'calc', value: 'Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)', inline: true },
-		{ name: 'bestie', value: 'Pulls a gif of Captain Spirit saying, \"So true, bestie!\"', inline: true },
-		{ name: 'flat', value: 'Pulls a gif of the flat hamster!', inline: true },
-		{ name: 'art, artic', value: 'Random image/artwork from the Art Institute of Chicago.', inline: true }
+		{ name: "8ball", value: "Answers binary questions.", inline: true },
+		{ name: "art, artic", value: "Random image/artwork from the Art Institute of Chicago.", inline: true },
+		{ name: "bestie", value: 'Pulls a gif of Captain Spirit saying, "So true, bestie!"', inline: true },
+		{ name: "calc", value: "Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)", inline: true },
+		{ name: "dadjokes n", value: "Returns 'n' dad jokes, 3 is default", inline: true },
+		{ name: "face", value: "Pulls a random face from \"This person does not exist\".", inline: true },
+		{ name: "flat", value: "Pulls a gif of the flat hamster!", inline: true },
+		{ name: "guid, uuid", value: "DMs the sender a cryptographically secure type 4 UUID.", inline: true },
+		{ name: "guess m=<maximum guess> <your guess>", value: "Guess a positive integer between 0 and m!", inline: true },
+		{ name: "height [tallest, shortest, average, nickname] [heightValue (cm)]", value: "Query and update heights of server members. Command alone returns all", inline: true },
+		{ name: "imgflip", value: "Generates a single-image meme via ImgFlip using completely random text.", inline: true },
+		{ name: "inspiro, inspirobot", value: "Pulls a random meme from InspiroBot!", inline: true },
+		{ name: "marco", value: 'Responds, "POLO!!"', inline: true },
+		{ name: "meme", value: "Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).", inline: true },
+		{ name: "pull <prompt, answer, key>", value: "Pulls random writer's prompt, 8ball answer, or Great Silence response from database.", inline: true },
+		{ name: "push <prompt, answer, greg>", value: "Adds random writer's prompt, 8ball answer, or Great Silence response to database. Returns insert ID", inline: true },
+		{ name: "rand <q>", value: "Generate q random integers.", inline: true },
+		{ name: "time", value: "Converts the current UTC time to local time in multiple time zones.", inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -463,19 +463,19 @@ async function getTimePromise() {
 				var allTimes = new MessageEmbed()
 				.setTitle('Current Time is...')
 				.setColor('#0099ff');
-				var rows = await conn.query("SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'UTC') AS timeConverted, 'UTC' AS zone UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Los_Angeles'), 'Pacific' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Denver'), 'Mountain' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Chicago'), 'Central' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/New_York'), 'Eastern' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Sao_Paulo'), 'Brazil' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Dublin'), 'UK' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'CET'), 'Italy/Slovenia/Switzerland' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Bucharest'), 'Romania' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Asia/Manila'), 'Philippines' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Australia/Melbourne'), 'Australia'");
-				
-			rows.forEach(async function(myTime) {
-				//allTimes.addField(myTime.zone, myTime.timeConverted.toString(), true);
-				allTimes.addFields({ name: myTime.zone, value: myTime.timeConverted.toString(), inline: true });
-				//console.log('Entropy!!\r\n');
-				//console.log(myTime.zone + '- ' + myTime.timeConverted + '\r\n');
-			});
-			
-				myResolve(allTimes);
+				var rows = await conn.query("SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'UTC') AS timeConverted, 'UTC' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Los_Angeles') AS timeConverted, 'Pacific' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Denver') AS timeConverted, 'Mountain' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Chicago') AS timeConverted, 'Central' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/New_York') AS timeConverted, 'Eastern' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Sao_Paulo') AS timeConverted, 'Brazil' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Dublin') AS timeConverted, 'UK' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'CET') AS timeConverted, 'Italy/Slovenia/Switzerland' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Bucharest') AS timeConverted, 'Romania' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Asia/Manila') AS timeConverted, 'Philippines' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Australia/Melbourne') AS timeConverted, 'Australia' AS zone;");
+	
+			allTimes.addFields(
+				rows.map((tz) => ({
+					name: `🌍 ${tz.zone}`,
+					value: `🕒 ${tz.timeConverted}`,
+					inline: true
+			})));
+			myResolve(allTimes);
 		});
 		promptOut = timePromise;
 	}
+	
 	catch (err)
 	{
 		myConsts.logger(err);
@@ -490,15 +490,20 @@ async function getTimePromise() {
 }
 
 //Using Luxon to perform local time conversions based on zone list
-function getTimePromise2(ianaTimeZones) {
+function getTimePromise2() {
 	return new Promise(function(myResolve, myReject) {
-		const localTimes = ianaTimeZones.map((timeZone) => ({
-		timeZone,
-		localTime: DateTime.now().setZone(timeZone).toFormat("yyyy-MM-dd HH:mm:ss")
-	}));
+		var allTimes = new MessageEmbed()
+				.setTitle('Current Time is...')
+				.setColor('#0099ff');
+		allTimes.addFields(
+				myConsts.myTZ.map((tz) => ({
+					name: `🌍 ${tz}`,
+					value: `🕒${DateTime.now().setZone(tz).toFormat("yyyy-MM-dd HH:mm:ss")}`,
+					inline: true
+			})));
 	//console.log(localTimes)
-		if (localTimes.length > 0)
-			myResolve(localTimes);
+		if (myConsts.myTZ.length > 0)
+			myResolve(allTimes);
 		else
 			myReject("Map of local times is empty!");
 	});
@@ -1007,16 +1012,16 @@ client.on("messageCreate", async function(message) {
 			);
 		  break;
 		  
+		  case 'timedb':
+		  getTimePromise().then(
+			function(times) { message.channel.send({embeds: [times]}); },
+			function(err) { message.channel.send(err); }
+		);
+		  break;
+		  
 		  case 'time':
-		  var allTimes = new MessageEmbed()
-		  .setTitle('The current time is:')
-		  .setColor('#0099ff');
-		  getTimePromise2(myConsts.myTZ).then(
-			function(myTimes)
-			{
-				myTimes.forEach((tz) => { allTimes.addFields({ name: tz.timeZone, value: tz.localTime, inline: true }); });
-				message.channel.send({embeds: [allTimes]});
-			},
+		  getTimePromise2().then(
+			function(myTimes) { message.channel.send({embeds: [myTimes]}); },
 			function(err) { message.channel.send(err); });
 		break;
 		  

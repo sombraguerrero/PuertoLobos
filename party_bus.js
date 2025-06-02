@@ -21,30 +21,29 @@ const helpEmbed = new MessageEmbed()
 	.setColor('#0099ff')
 	.setTitle('Valid Commands')
 	.addFields(
-		{ name: 'marco', value: 'Responds, "POLO!!"', inline: true },
-		{ name: 'inspiro, insprio, inspirobot', value: 'Pulls a random meme from InspiroBot!', inline: true },
-		{ name: 'guess m=<maximum guess> <your guess>', value: `Guess a positive integer between 0 and m!`, inline: true },
-		{ name: 'dadjokes n', value: 'Returns \'n\' dad jokes, 3 is default', inline: true },
-		{ name: 'guid, uuid', value: 'DMs the sender a cryptographically secure type 4 UUID.', inline: true },
-		{ name: 'time', value: 'Converts the current UTC time to local time in multiple time zones.', inline: true },
-		{ name: 'imgflip', value: 'Generates a single-image meme via ImgFlip using completely random text.', inline: true },
-		{ name: 'meme', value: 'Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).', inline: true },
-		{ name: 'face', value: 'Pulls a random face from \"This person does not exist\".', inline: true },
-		{ name: 'calc', value: 'Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)', inline: true },
-		{ name: 'chuck, norris', value: 'CHUCK NORRRIIIIIIIIIIIIIIIIISSSS!!!', inline: true },
-		{ name: 'unsplash [query]', value: 'Community-provided high-res images. Random with no argument or will search for given query.', inline: true },
-		{ name: 'apod', value: 'NASA\'s Astronomy Picture of the Day', inline: true },
-		{ name: 'art, artic', value: 'Random image/artwork from the Art Institute of Chicago.', inline: true },
-		{ name: 'arctic', value: 'Random images of Arctic creatures', inline: true },
-		{ name: 'bird, birds, birb, birbs, borb, borbs', value: 'Images of birds!', inline: true },
-		{ name: 'cat, cats', value: 'Images of cats!', inline: true },
-		{ name: 'dog, dogs, doge', value: 'Images of dogs!', inline: true },
-		{ name: 'duckroll', value: 'Roll for ducks! (D20)', inline: true },
-		{ name: 'catroll', value: 'Roll for cats! (D20)', inline: true },
-		{ name: 'beastroll', value: 'Roll for a random animal! (D20)', inline: true },
-		{ name: 'shibe, shibes', value: 'Images of Shibe Inu dogs!', inline: true },
-		{ name: 'shibe, shibes', value: 'Images of Shibe Inu dogs!', inline: true }
-		
+		{ name: "apod", value: "NASA's Astronomy Picture of the Day", inline: true },
+		{ name: "arctic", value: "Random images of Arctic creatures", inline: true },
+		{ name: "art, artic", value: "Random image/artwork from the Art Institute of Chicago.", inline: true },
+		{ name: "beastroll", value: "Roll for a random animal! (D20)", inline: true },
+		{ name: "bird, birds, birb, birbs, borb, borbs", value: "Images of birds!", inline: true },
+		{ name: "calc", value: "Calculates any arithmetic expression (JavaScript-like functions available to get fancy!)", inline: true },
+		{ name: "cat, cats", value: "Images of cats!", inline: true },
+		{ name: "catroll", value: "Roll for cats! (D20)", inline: true },
+		{ name: "chuck, norris", value: "CHUCK NORRRIIIIIIIIIIIIIIIIISSSS!!!", inline: true },
+		{ name: "dadjokes n", value: "Returns 'n' dad jokes, 3 is default", inline: true },
+		{ name: "dog, dogs, doge", value: "Images of dogs!", inline: true },
+		{ name: "duckroll", value: "Roll for ducks! (D20)", inline: true },
+		{ name: "face", value: "Pulls a random face from 'This person does not exist'.", inline: true },
+		{ name: "guid, uuid", value: "DMs the sender a cryptographically secure type 4 UUID.", inline: true },
+		{ name: "guess m=<maximum guess> <your guess>", value: "Guess a positive integer between 0 and m!", inline: true },
+		{ name: "imgflip", value: "Generates a single-image meme via ImgFlip using completely random text.", inline: true },
+		{ name: "inspiro, insprio, inspirobot", value: "Pulls a random meme from InspiroBot!", inline: true },
+		{ name: "marco", value: 'Responds, "POLO!!"', inline: true },
+		{ name: "meme", value: "Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).", inline: true },
+		{ name: "rand <q>", value: "Generate q random integers.", inline: true },
+		{ name: "shibe, shibes", value: "Images of Shibe Inu dogs!", inline: true },
+		{ name: "time", value: "Converts the current UTC time to local time in multiple time zones.", inline: true },
+		{ name: "unsplash [query]", value: "Community-provided high-res images. Random with no argument or will search for given query.", inline: true }
 	);
 	
 const debugImg = new MessageEmbed()
@@ -680,19 +679,19 @@ async function getTimePromise() {
 				var allTimes = new MessageEmbed()
 				.setTitle('Current Time is...')
 				.setColor('#0099ff');
-				var rows = await conn.query("SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'UTC') AS timeConverted, 'UTC' AS zone UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Los_Angeles'), 'Pacific' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Denver'), 'Mountain' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Chicago'), 'Central' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/New_York'), 'Eastern' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Sao_Paulo'), 'Brazil' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Dublin'), 'UK' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'CET'), 'Italy/Slovenia/Switzerland' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Bucharest'), 'Romania' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Asia/Manila'), 'Philippines' UNION SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Australia/Melbourne'), 'Australia'");
-				
-			rows.forEach(async function(myTime) {
-				//allTimes.addField(myTime.zone, myTime.timeConverted.toString(), true);
-				allTimes.addFields({ name: myTime.zone, value: myTime.timeConverted.toString(), inline: true });
-				//console.log('Entropy!!\r\n');
-				//console.log(myTime.zone + '- ' + myTime.timeConverted + '\r\n');
-			});
-			
-				myResolve(allTimes);
+				var rows = await conn.query("SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'UTC') AS timeConverted, 'UTC' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Los_Angeles') AS timeConverted, 'Pacific' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Denver') AS timeConverted, 'Mountain' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Chicago') AS timeConverted, 'Central' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/New_York') AS timeConverted, 'Eastern' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'America/Sao_Paulo') AS timeConverted, 'Brazil' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Dublin') AS timeConverted, 'UK' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'CET') AS timeConverted, 'Italy/Slovenia/Switzerland' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Europe/Bucharest') AS timeConverted, 'Romania' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Asia/Manila') AS timeConverted, 'Philippines' AS zone UNION ALL SELECT CONVERT_TZ(NOW(), @@SESSION.time_zone, 'Australia/Melbourne') AS timeConverted, 'Australia' AS zone;");
+	
+			allTimes.addFields(
+				rows.map((tz) => ({
+					name: `🌍 ${tz.zone}`,
+					value: `🕒 ${tz.timeConverted}`,
+					inline: true
+			})));
+			myResolve(allTimes);
 		});
 		promptOut = timePromise;
 	}
+	
 	catch (err)
 	{
 		myConsts.logger(err);
@@ -707,34 +706,22 @@ async function getTimePromise() {
 }
 
 //Using Luxon to perform local time conversions based on zone list
-function getTimePromise2(ianaTimeZones) {
+function getTimePromise2() {
 	return new Promise(function(myResolve, myReject) {
-		const localTimes = ianaTimeZones.map((timeZone) => ({
-		timeZone,
-		localTime: DateTime.now().setZone(timeZone).toFormat("yyyy-MM-dd HH:mm:ss")
-	}));
+		var allTimes = new MessageEmbed()
+				.setTitle('Current Time is...')
+				.setColor('#0099ff');
+		allTimes.addFields(
+				myConsts.myTZ.map((tz) => ({
+					name: `🌍 ${tz}`,
+					value: `🕒${DateTime.now().setZone(tz).toFormat("yyyy-MM-dd HH:mm:ss")}`,
+					inline: true
+			})));
 	//console.log(localTimes)
-		if (localTimes.length > 0)
-			myResolve(localTimes);
+		if (myConsts.myTZ.length > 0)
+			myResolve(allTimes);
 		else
 			myReject("Map of local times is empty!");
-	});
-}
-
-function BuildTimePromises() {
-	var myPromises = new Array();
-	return new Promise(function(passingTime, myReject) {
-		try
-		{
-			myConsts.myTZ.forEach(function(time) {
-				myPromises.push(getTimePromise2(time));
-			});
-			passingTime(myPromises);
-		}
-		catch (e)
-		{
-			myReject(e);
-		}
 	});
 }
 
@@ -1145,17 +1132,17 @@ client.on("messageCreate", async function(message) {
 		  break;
 			  
 		  case 'time':
-		  var allTimes = new MessageEmbed()
-		  .setTitle('The current time is:')
-		  .setColor('#0099ff');
-		  getTimePromise2(myConsts.myTZ).then(
-			function(myTimes)
-			{
-				myTimes.forEach((tz) => { allTimes.addFields({ name: tz.timeZone, value: tz.localTime, inline: true }); });
-				message.channel.send({embeds: [allTimes]});
-			},
+		  getTimePromise2().then(
+			function(myTimes) { message.channel.send({embeds: [myTimes]}); },
 			function(err) { message.channel.send(err); });
 		break;
+		
+		  case 'timedb':
+		  getTimePromise().then(
+			function(times) { message.channel.send({embeds: [times]}); },
+			function(err) { message.channel.send(err); }
+		);
+		  break;
 		  
 		  case 'inspiro':
 		  case 'insprio':
@@ -1188,6 +1175,18 @@ client.on("messageCreate", async function(message) {
 		  case 'uuid':
 			  message.author.send(uuidv4().toUpperCase());
 		  break;
+		  
+		  case 'rand':
+		  args = baseArg != null ? baseArg.split(' ') : [];
+		  if (args.length == 1)
+		  {
+			  var qty = parseInt(args[0]);
+			  myConsts.getInt(qty).then(
+				function(resp) { message.channel.send(resp.join()); },
+				function(err) { message.channel.send(err); }
+			  );
+		  }
+		 break;
 		  
 		  case 'dadjokes':
 		  numJokes = parseInt(baseArg);
