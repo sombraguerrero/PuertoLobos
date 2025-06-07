@@ -467,7 +467,7 @@ async function getTimePromise() {
 	
 			allTimes.addFields(
 				rows.map((tz) => ({
-					name: `🌍 ${tz.zone}`,
+					name: `🌍 ${tz.ZONE}`,
 					value: `🕒 ${tz.timeConverted}`,
 					inline: true
 			})));
@@ -976,7 +976,7 @@ client.on("messageCreate", async function(message) {
 		  if (args.length == 1)
 		  {
 			  var qty = parseInt(args[0]);
-			  myConsts.getInt(qty).then(
+			  myConsts.getInt(1000,10000,qty).then(
 				function(resp) { message.channel.send(resp.join()); },
 				function(err) { message.channel.send(err); }
 			  );
