@@ -1047,7 +1047,7 @@ function validateShop(p) {
 	return shopprefixes.indexOf(p);
 }
 
-client.on("messageCreate", async (message) => {
+client.on("messageCreate", async function(message) {
 	try
 	{
 	  if (message.author.bot)
@@ -1056,11 +1056,12 @@ client.on("messageCreate", async (message) => {
 	  }
 	  
 	  var isShop = validateShop(message.content[0]) >= 0;
-	  console.log(isShop);
 	  if (isShop)
 	  {
 		  try
 		  {
+			  //I believe because I wasn't defining this object and catching exceptions initially,
+			  //await was being disallowed because of unhandled rejections
 			  conn = await pool.getConnection();
 			  await conn.query("CALL useStore(?, @myPoints)", [message.content]);
 			  const rows = await conn.query("SELECT @myPoints AS myPoints");
@@ -1070,7 +1071,7 @@ client.on("messageCreate", async (message) => {
 		  catch (err)
 		  {
 			  console.error("Database error:", err);
-			  message.reply("An error occurred while fetching data.");
+			  message.author.send("An error occurred while fetching data.");
 		  }
 		  finally
 		  {
