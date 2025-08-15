@@ -41,6 +41,7 @@ const helpEmbed = new MessageEmbed()
 		{ name: "marco", value: 'Responds, "POLO!!"', inline: true },
 		{ name: "meme", value: "Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).", inline: true },
 		{ name: "rand <q>", value: "Generate q random integers.", inline: true },
+		{ name: "sheeproll", value: "Roll for sheep! (D20)", inline: true },
 		{ name: "shibe, shibes", value: "Images of Shibe Inu dogs!", inline: true },
 		{ name: "time", value: "Converts the current UTC time to local time in multiple time zones.", inline: true },
 		{ name: "unsplash [query]", value: "Community-provided high-res images. Random with no argument or will search for given query.", inline: true }
@@ -73,7 +74,7 @@ async function getArtWork() {
 	myConsts.logger(err);
   } finally {
 	if (conn)
-		conn.end();
+		await conn.release();
 	return promptOut;	
   }
 }
@@ -125,7 +126,7 @@ async function getImg(panels, boxes) {
 	myConsts.logger(err);
   } finally {
 	if (conn)
-		conn.end();
+		await conn.release();
 	return promptOut;	
   }
 }
@@ -361,7 +362,7 @@ function BeastPromise() {
 				.then(
 					function(vals)
 					{
-						var beasts = ['🐈','🐕','🐉','🐑','🦀','🐳','🦘','🐟'];
+						var beasts = ['🐈','🐕','🐉','🐑','🦀','🐳','🦘','🐟','🦒','🦑','🐄'];
 						var beast_sel = beasts[vals[0] % beasts.length];
 						var beast = '';
 						for (d = 1; d <= vals[1]; d++)
@@ -665,7 +666,7 @@ async function dadJokeDB(n)
 	finally
 	{
 		if (conn)
-			conn.end();
+			await conn.release();
 		return jokesStr;
 	}
 }
@@ -700,7 +701,7 @@ async function getTimePromise() {
 	finally
 	{
 		if (conn)
-			conn.end();
+			await conn.release();
 		return promptOut;
 	}	
 }
@@ -1036,12 +1037,17 @@ function getUsage()
 
 
 const prefixes = ['!','?'];
+const shopprefixes = ['+','-'];
 
 function validatePrefix(p) {
 	return prefixes.indexOf(p);
 }
 
-client.on("messageCreate", async function(message) {
+function validateShop(p) {
+	return shopprefixes.indexOf(p);
+}
+
+client.on("messageCreate", async (message) => {
 	try
 	{
 	  if (message.author.bot)
@@ -1049,266 +1055,299 @@ client.on("messageCreate", async function(message) {
 		  return;
 	  }
 	  
-	  var prefixFound = validatePrefix(message.content[0]);
-	  //console.log('Prefix: ' + prefixes[prefixFound]);
-	  if (prefixFound < 0 || !message.content.startsWith(prefixes[prefixFound]))
+	  var isShop = validateShop(message.content[0]) >= 0;
+	  console.log(isShop);
+	  if (isShop)
 	  {
-		  console.log("No prefix!");
-		  return;
-	  }
-	  
-	  var prefix = prefixes[prefixFound];
-	  const command = message.content.indexOf(' ') >= 0 ? message.content.slice(prefix.length, message.content.indexOf(' ')) : message.content.slice(prefix.length);
-	  const baseArg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : null;
-	  var args;
-	  //console.log(command + '\r\n' + arg);
-	  
-	  switch (command.toLowerCase())
-	  {
-		  
-		  case "8ball":
-		  message.reply(await getPrompt('answer'));
-		  break;
-		  
-		  case "marco":
-		  message.channel.send("POLO!!");
-		  break;
-		  
-		  case 'debug':
-		  //message.channel.send({embeds: [debugImg]});
-		  message.channel.send("<:doubt:878211423942082580>");
-		  break;
-		  
-		  case 'guess':
-		  args = baseArg != null ? baseArg.split(' ') : [];
-		  if (args.length == 2 && args[0].startsWith("m="))
+		  try
 		  {
-			  var max = parseInt(args[0].substring(2));
-			  var userGuess = parseInt(args[1]);
-			  if (userGuess <= max)
+			  conn = await pool.getConnection();
+			  await conn.query("CALL useStore(?, @myPoints)", [message.content]);
+			  const rows = await conn.query("SELECT @myPoints AS myPoints");
+			  const theTotal = rows[0].myPoints;
+			  message.reply(`Nikko's points: ${theTotal}`);
+		  }
+		  catch (err)
+		  {
+			  console.error("Database error:", err);
+			  message.reply("An error occurred while fetching data.");
+		  }
+		  finally
+		  {
+			  await conn.release(); 
+		  }
+		  
+	  }
+	  else
+	  {
+		  var prefixFound = validatePrefix(message.content[0]);
+		  //console.log('Prefix: ' + prefixes[prefixFound]);
+		  if (prefixFound < 0 || !message.content.startsWith(prefixes[prefixFound]))
+		  {
+			  console.log("No prefix!");
+			  return;
+		  }
+		  
+		  var prefix = prefixes[prefixFound];
+		  const command = message.content.indexOf(' ') >= 0 ? message.content.slice(prefix.length, message.content.indexOf(' ')) : message.content.slice(prefix.length);
+		  const baseArg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : null;
+		  var args;
+		  //console.log(command + '\r\n' + arg);
+		  
+		  switch (command.toLowerCase())
+		  {
+			  
+			  case "8ball":
+			  message.reply(await getPrompt('answer'));
+			  break;
+			  
+			  case "marco":
+			  message.channel.send("POLO!!");
+			  break;
+			  
+			  case 'debug':
+			  //message.channel.send({embeds: [debugImg]});
+			  message.channel.send("<:doubt:878211423942082580>");
+			  break;
+			  
+			  case 'guess':
+			  args = baseArg != null ? baseArg.split(' ') : [];
+			  if (args.length == 2 && args[0].startsWith("m="))
 			  {
-				NumberGamePromise(max, userGuess).then(
-				function(resp) { message.channel.send(resp); },
+				  var max = parseInt(args[0].substring(2));
+				  var userGuess = parseInt(args[1]);
+				  if (userGuess <= max)
+				  {
+					NumberGamePromise(max, userGuess).then(
+					function(resp) { message.channel.send(resp); },
+					function(err) { message.channel.send(err); }
+					);
+				  }
+				  else
+				  {
+					  message.channel.send("You can't guess over the maximum!");
+				  }
+			  }
+			 else {
+				message.channel.send("!guess m=<maximum guess> <your guess>");
+			 }
+			  break;
+			  
+			  case 'imgflip':
+			  CallImgFlip().then(
+				function(resp)
+				{
+					genImgFlip(resp).then(
+						function(resp2) { message.channel.send({embeds: [resp2]}); },
+						function(err) { message.channel.send(err); }
+					);
+					//console.log(resp);
+				}
+			  );
+			  break;
+			  
+			  case 'calc':
+			  //console.log(JSON.stringify(message.author.id));
+			  message.channel.send(evaluate(baseArg).toString());
+			  break;
+			  
+			  case 'meme':
+			  var imgParamsStr = baseArg.substring(0, baseArg.indexOf(' '));
+			  var imgParams = imgParamsStr.split('-');
+			  var textContent = baseArg.substring(baseArg.indexOf(' ') + 1);
+			  console.log(`text : ${textContent}\r\npanels: ${imgParams[0]}\r\ntextboxes: ${imgParams[1]}`);
+			  await genImgFlipDB(textContent, imgParams[0], imgParams[1]).then(
+				  function(resp) { message.channel.send({embeds: [resp]}); },
+				  function(err) { message.channel.send(err); }
+				);
+			  break;
+				  
+			  case 'time':
+			  getTimePromise2().then(
+				function(myTimes) { message.channel.send({embeds: [myTimes]}); },
+				function(err) { message.channel.send(err); });
+			break;
+			
+			  case 'timedb':
+			  getTimePromise().then(
+				function(times) { message.channel.send({embeds: [times]}); },
 				function(err) { message.channel.send(err); }
+			);
+			  break;
+			  
+			  case 'inspiro':
+			  case 'insprio':
+			  case 'inspirobot':
+			  inspiroPromise().then(
+				function(img) { message.channel.send({embeds: [img]}); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'face':
+			  facePromise().then(
+				function(img) { message.channel.send({content: 'This person does not exist!', files: [img]}); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'help':
+			  message.channel.send({embeds: [helpEmbed]});
+			  break;
+			  
+			  case 'usage':
+				  getUsage().then(
+				  function(output) { message.author.send({embeds: [output]}); },
+				  function(err) { message.author.send(JSON.stringify(err)); }
+				  );
+			  break;
+			  
+			  case 'guid':
+			  case 'uuid':
+				  message.author.send(uuidv4().toUpperCase());
+			  break;
+			  
+			  case 'rand':
+			  args = baseArg != null ? baseArg.split(' ') : [];
+			  if (args.length == 1)
+			  {
+				  var qty = parseInt(args[0]);
+				  myConsts.getInt(1000,10000,qty).then(
+					function(resp) { message.channel.send(resp.join()); },
+					function(err) { message.channel.send(err); }
+				  );
+			  }
+			 break;
+			  
+			  case 'dadjokes':
+			  numJokes = parseInt(baseArg);
+			  checkedNum = isNaN(numJokes) ? 3 : numJokes;
+			  message.channel.send(await dadJokeDB(checkedNum));
+			  /**
+			  dadJokesPromise().then(
+				function(jokes) { message.channel.send(jokes); },
+				function(err) { message.channel.send(err); }
+			  );
+			  **/
+			  break;
+			  
+			  case 'shibe':
+			  case 'shibes':
+			  shibesPromise('shibes').then(
+				function(img) { message.channel.send({files: [img] }); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'cat':
+			  case 'cats':
+			  shibesPromise('cats').then(
+				function(img) { message.channel.send({files: [img] }); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'bird':
+			  case 'birds':
+			  case 'birb':
+			  case 'birbs':
+			  case 'borb':
+			  case 'borbs':
+			  shibesPromise('birds').then(
+				function(img) { message.channel.send({files: [img] }); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'arctic':
+			  arcticPromise().then(
+				function(img) { message.channel.send({files: [img] }); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'chuck':
+			  case 'norris':
+			  ChuckNorris().then(
+				function(norris) { message.channel.send(norris); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'unsplash':
+			  if (baseArg != null)
+			  {
+				  //console.log(baseArg);
+				  Unsplash(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER), baseArg).then(
+				  function(img) { message.channel.send({embeds: [img]}); },
+				  function(err) { message.channel.send(err); }
 				);
 			  }
 			  else
 			  {
-				  message.channel.send("You can't guess over the maximum!");
-			  }
-		  }
-		 else {
-		 	message.channel.send("!guess m=<maximum guess> <your guess>");
-		 }
-		  break;
-		  
-		  case 'imgflip':
-		  CallImgFlip().then(
-			function(resp)
-			{
-				genImgFlip(resp).then(
-					function(resp2) { message.channel.send({embeds: [resp2]}); },
-					function(err) { message.channel.send(err); }
+				  Unsplash(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
+				  function(img) { message.channel.send({embeds: [img]}); },
+				  function(err) { message.channel.send(err); }
 				);
-				//console.log(resp);
-			}
-		  );
-		  break;
-		  
-		  case 'calc':
-		  //console.log(JSON.stringify(message.author.id));
-		  message.channel.send(evaluate(baseArg).toString());
-		  break;
-		  
-		  case 'meme':
-		  var imgParamsStr = baseArg.substring(0, baseArg.indexOf(' '));
-		  var imgParams = imgParamsStr.split('-');
-		  var textContent = baseArg.substring(baseArg.indexOf(' ') + 1);
-		  console.log(`text : ${textContent}\r\npanels: ${imgParams[0]}\r\ntextboxes: ${imgParams[1]}`);
-		  await genImgFlipDB(textContent, imgParams[0], imgParams[1]).then(
-			  function(resp) { message.channel.send({embeds: [resp]}); },
-			  function(err) { message.channel.send(err); }
-			);
-		  break;
+			  }
+			  break;
 			  
-		  case 'time':
-		  getTimePromise2().then(
-			function(myTimes) { message.channel.send({embeds: [myTimes]}); },
-			function(err) { message.channel.send(err); });
-		break;
-		
-		  case 'timedb':
-		  getTimePromise().then(
-			function(times) { message.channel.send({embeds: [times]}); },
-			function(err) { message.channel.send(err); }
-		);
-		  break;
-		  
-		  case 'inspiro':
-		  case 'insprio':
-		  case 'inspirobot':
-		  inspiroPromise().then(
-			function(img) { message.channel.send({embeds: [img]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'face':
-		  facePromise().then(
-			function(img) { message.channel.send({content: 'This person does not exist!', files: [img]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'help':
-		  message.channel.send({embeds: [helpEmbed]});
-		  break;
-		  
-		  case 'usage':
-			  getUsage().then(
-			  function(output) { message.author.send({embeds: [output]}); },
-			  function(err) { message.author.send(JSON.stringify(err)); }
-			  );
-		  break;
-		  
-		  case 'guid':
-		  case 'uuid':
-			  message.author.send(uuidv4().toUpperCase());
-		  break;
-		  
-		  case 'rand':
-		  args = baseArg != null ? baseArg.split(' ') : [];
-		  if (args.length == 1)
-		  {
-			  var qty = parseInt(args[0]);
-			  myConsts.getInt(1000,10000,qty).then(
-				function(resp) { message.channel.send(resp.join()); },
+			  case 'apod':
+			  NasaAPOD(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
+				function(img) { message.channel.send({embeds: [img]}); },
 				function(err) { message.channel.send(err); }
 			  );
+			  break;
+			  
+			  case 'art':
+			  case 'artic':
+			  genArtworkEmbed().then(
+				function(img) { message.channel.send({embeds: [img]}); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'dog':
+			  case 'dogs':
+			  case 'doge':
+			  DogAsService(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
+				function(img) { message.channel.send({embeds: [img]}); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'catroll':
+			  EmojiPromise('🐈').then(
+				function(ducks) { message.reply(ducks); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'duckroll':
+			  EmojiPromise('🦆').then(
+				function(ducks) { message.reply(ducks); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'sheeproll':
+			  EmojiPromise('🐑').then(
+				function(ducks) { message.reply(ducks); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  case 'beastroll':
+			  BeastPromise().then(
+				function(beasts) { message.reply(beasts); },
+				function(err) { message.channel.send(err); }
+			  );
+			  break;
+			  
+			  default:
+			  console.log(command.toLowerCase());
+			  return;
 		  }
-		 break;
-		  
-		  case 'dadjokes':
-		  numJokes = parseInt(baseArg);
-		  checkedNum = isNaN(numJokes) ? 3 : numJokes;
-		  message.channel.send(await dadJokeDB(checkedNum));
-		  /**
-		  dadJokesPromise().then(
-			function(jokes) { message.channel.send(jokes); },
-			function(err) { message.channel.send(err); }
-		  );
-		  **/
-		  break;
-		  
-		  case 'shibe':
-		  case 'shibes':
-		  shibesPromise('shibes').then(
-			function(img) { message.channel.send({files: [img] }); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'cat':
-		  case 'cats':
-		  shibesPromise('cats').then(
-			function(img) { message.channel.send({files: [img] }); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'bird':
-		  case 'birds':
-		  case 'birb':
-		  case 'birbs':
-		  case 'borb':
-		  case 'borbs':
-		  shibesPromise('birds').then(
-			function(img) { message.channel.send({files: [img] }); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'arctic':
-		  arcticPromise().then(
-			function(img) { message.channel.send({files: [img] }); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'chuck':
-		  case 'norris':
-		  ChuckNorris().then(
-			function(norris) { message.channel.send(norris); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'unsplash':
-		  if (baseArg != null)
-		  {
-			  //console.log(baseArg);
-			  Unsplash(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER), baseArg).then(
-			  function(img) { message.channel.send({embeds: [img]}); },
-			  function(err) { message.channel.send(err); }
-			);
-		  }
-		  else
-		  {
-			  Unsplash(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
-			  function(img) { message.channel.send({embeds: [img]}); },
-			  function(err) { message.channel.send(err); }
-			);
-		  }
-		  break;
-		  
-		  case 'apod':
-		  NasaAPOD(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
-			function(img) { message.channel.send({embeds: [img]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'art':
-		  case 'artic':
-		  genArtworkEmbed().then(
-			function(img) { message.channel.send({embeds: [img]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'dog':
-		  case 'dogs':
-		  case 'doge':
-		  DogAsService(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)).then(
-			function(img) { message.channel.send({embeds: [img]}); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'catroll':
-		  EmojiPromise('🐈').then(
-			function(ducks) { message.reply(ducks); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'duckroll':
-		  EmojiPromise('🦆').then(
-			function(ducks) { message.reply(ducks); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  case 'beastroll':
-		  BeastPromise().then(
-			function(beasts) { message.reply(beasts); },
-			function(err) { message.channel.send(err); }
-		  );
-		  break;
-		  
-		  default:
-		  console.log(command.toLowerCase());
-		  return;
 	  }
 	}
 	catch(err)
