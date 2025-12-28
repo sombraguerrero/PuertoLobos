@@ -5,6 +5,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const FormData = require('form-data');
+const PImage = require('pureimage');
 
 function getKeyResponse() {
 	 let conn;
@@ -167,28 +168,27 @@ function RandomColor(num, target) {
 	
 	var rgbStr = `(${aRgb[0]}, ${aRgb[1]}, ${aRgb[2]})`;
 	var textOutput = `Hex: #${hexColor.toUpperCase()} RGB: ${rgbStr}`;
-	//Credit to Russell Heimlich (http://www.russellheimlich.com/blog) for the image generator.
-	const getOptions = {
-			hostname: 'localhost',
-			path: `/dummyimage/code.php?x=640x480/${hexColor}/FFF/`,
-			method: 'GET',
-			headers: {
-			  'User-Agent': myConsts.UA
-			}
-		  };
-		  console.log("URI: " + getOptions.hostname + getOptions.path);
-
-	//Perform GET request with specified options.
-	var formData = new FormData();
-	http.request(getOptions, (addr_res) => {
-		var imgOut = fs.createWriteStream("/volume1/homes/bobertdos/webhooks/color.png");
-		addr_res.pipe(imgOut);
-		imgOut.on('finish', () => {
-				formData.append('content', `${myConsts.GREG} \r\nRandom Color Code!\r\n${textOutput}`);
-				formData.append('file', fs.createReadStream("/volume1/homes/bobertdos/webhooks/color.png"), {filename: 'color.png'});
-				formData.submit(`https://discord.com/api/webhooks/${target}`);
-		});
-	}).end();
+	
+	// make image
+	var img1 = PImage.make(640, 480);
+	
+	// get canvas context
+	const ctx = img1.getContext("2d");
+	
+	ctx.fillStyle = `#${hexColor}`;
+	ctx.fillRect(0, 0, 640, 480);
+	
+	//write to 'out.png'
+	PImage.encodePNGToStream(img1, fs.createWriteStream('/volume1/homes/bobertdos/webhooks/color.png')).then(() => {
+		console.log("wrote out the png file to color.png");
+		var formData = new FormData();
+		formData.append('content', `${myConsts.GREG} \r\nRandom Color Code!\r\n${textOutput}`);
+		formData.append('file', fs.createReadStream("/volume1/homes/bobertdos/webhooks/color.png"), {filename: 'color.png'});
+		formData.submit(`https://discord.com/api/webhooks/${target}`);
+	})
+	.catch((e) => {
+		console.log("there was an error writing");
+	});
 }
 
 function InspiroBot(num) {
