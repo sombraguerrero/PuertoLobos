@@ -408,13 +408,14 @@ function BeastPromise() {
 					{
 						var beast_sel = beasts[vals[0] % beasts.length];
 						var beast = '';
-						if (vals[1] == 0)
-							vals[1]++;
-						vals[1] %= 21;
-						for (d = 1; d <= vals[1]; d++)
+						var i = 1;
+						vals[1] = vals[1] > 20 ? 20 : vals[1]; 
+						do 
 						{
 							beast += beast_sel;
+							i++;
 						}
+						while(i <= vals[1]);
 						myResolve(beast);
 					},
 					function(anError) { console.log(anError); });
