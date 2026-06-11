@@ -411,7 +411,7 @@ function BeastPromise() {
 						if (vals[1] == 0)
 							vals[1]++;
 						vals[1] %= 21;
-						for (d = 0; d < vals[1]; d++)
+						for (d = 1; d <= vals[1]; d++)
 						{
 							beast += beast_sel;
 						}
