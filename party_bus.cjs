@@ -217,19 +217,6 @@ function Affirm() {
 	});
 }
 
-function formatDate (inputDate, format)  {
-	if (!inputDate) return '';
-
-	const padZero = (value) => (value < 10 ? `0${value}` : `${value}`);
-	const parts = {
-		yy: inputDate.getFullYear().toString().slice(-2),
-		MM: padZero(inputDate.getMonth() + 1),
-		dd: padZero(inputDate.getDate())
-	};
-
-	return format.replace(/yy|MM|dd/g, (match) => parts[match]);
-}
-
 function NasaAPOD(num) {
 	return new Promise(function(myResolve, myReject) {
 		var startDate = new Date(1995,5,17); //per NASA spec, must be after 1995-06-16, the first day APOD was posted
@@ -237,7 +224,8 @@ function NasaAPOD(num) {
 		var base_msec = startDate.getTime();
 		var modifier = endDate - startDate;
 		var random_msec = base_msec + (num % modifier);
-		var apodDate =  formatDate(new Date(random_msec), 'yyMMdd');
+		var apodDate =  myConsts.formatDate(new Date(random_msec), 'yyMMdd');
+		console.log("ApodDate: " + apodDate);
 	const contentOptions = {
 			hostname: 'science.nasa.gov',
 			path: `/wp-json/wp/v2/apod-basic/${apodDate}?api_key=${myConsts.NASA}`,
@@ -1123,12 +1111,46 @@ client.on("messageCreate", async function(message) {
 	  {
 		  return;
 	  }
-	  
-	  var isShop = validateShop(message.content[0]) >= 0;
-	  if (isShop)
+	  var shopIndex = validateShop(message.content[0]);
+	  //console.log(message.content);
+	  if (message.content.toLowerCase().endsWith("points"))
 	  {
 		  try
 		  {
+			  //console.log("Hitting adjustment");
+			  args = message.content.split(' ');
+			  //console.log(args);
+			  if (args.length > 1 && !isNaN(args[0]))
+			  {
+				//I believe because I wasn't defining this object and catching exceptions initially,
+				//await was being disallowed because of unhandled rejections
+
+				conn = await pool.getConnection();
+				await conn.query("CALL adjustPoints(?, @myPoints)", [parseInt(args[0])]);
+				const rows = await conn.query("SELECT @myPoints AS myPoints");
+				const theTotal = rows[0].myPoints;
+				message.reply(`Nikko's points: ${theTotal}`);
+			  }
+		  }
+		  catch (err)
+		  {
+			  console.error("Database error:", err);
+			  message.author.send("An error occurred while fetching data.");
+		  }
+		  finally
+		  {
+			  await conn.release();
+		  }
+	  }
+	  else if (shopIndex >= 0)
+	  {
+		  var shopPrefix = shopprefixes[shopIndex];
+		  const command = message.content.indexOf(' ') >= 0 ? message.content.slice(shopPrefix.length, message.content.indexOf(' ')) : message.content.slice(shopPrefix.length);
+		  const baseArg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : null;
+		  var args;
+		  try
+		  {
+			  //console.log("Hitting shop");
 			  //I believe because I wasn't defining this object and catching exceptions initially,
 			  //await was being disallowed because of unhandled rejections
 			  conn = await pool.getConnection();
@@ -1144,9 +1166,9 @@ client.on("messageCreate", async function(message) {
 		  }
 		  finally
 		  {
-			  await conn.release(); 
+			  await conn.release();
 		  }
-		  
+
 	  }
 	  else
 	  {

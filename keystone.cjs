@@ -399,20 +399,6 @@ function pullStuff(rockFact, target, targetpath) {
 	});
 }
 
-function formatDate (inputDate, format)  {
-	if (!inputDate) return '';
-
-	const padZero = (value) => (value < 10 ? `0${value}` : `${value}`);
-	const parts = {
-		yy: inputDate.getFullYear().toString().slice(-2),
-		MM: padZero(inputDate.getMonth() + 1),
-		dd: padZero(inputDate.getDate())
-	};
-
-	return format.replace(/yy|MM|dd/g, (match) => parts[match]);
-}
-
-
 function selectDate(num, mode) {
 	//Month is zero-indexed in JS!
 	var startDate = null;
@@ -441,7 +427,7 @@ function selectDate(num, mode) {
 		base_msec = startDate.getTime();
 		modifier = endDate - startDate;
 		random_msec = base_msec + (num % modifier);
-		finalDate =  formatDate(new Date(random_msec), 'yyMMdd');
+		finalDate =  myConsts.formatDate(new Date(random_msec), 'yyMMdd');
 		break;
 		
 		case 'spirit':
@@ -788,7 +774,7 @@ function NasaAPOD(apodDate, num) {
 			  'User-Agent': myConsts.UA
 			}
 		  };
-		  //console.log(contentOptions);
+		  console.log(contentOptions);
 
 	//Perform GET request with specified options. (Note that the aliased functions automatically call end() on the request object.)
 	const contentReq = https.request(contentOptions, (res) => {
@@ -1255,14 +1241,8 @@ myConsts.getSeed(true, 1)
 			break;
 			
 			default:
-			if (Math.round(myConsts.getSeed(false)) == 1) {
-				console.log('NatalieDee selected.\n');
-				NatalieDee(selectDate(val, "nat"));
-			}
-			else {
-				console.log('Random cat beat NatalieDee in a coin toss, because cat!\n');
-				CatAsService(val);
-			}
+			console.log('Random cat beat NatalieDee in a coin toss, because cat!\n');
+			CatAsService(val);
 			break;
 		}
 	},
