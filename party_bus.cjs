@@ -281,6 +281,7 @@ function NasaAPOD(num) {
 			myEmbed.provider = myProvider;
 			myEmbed.footer = myFooter;
 			myEmbed.title = parsedData.title;
+			myEmbed.url = parsedData.permalink;
 			const cleanDesc = sanitizeHtml(parsedData.explanation, {
 				allowedTags: [],
 				allowedAttributes: {}
