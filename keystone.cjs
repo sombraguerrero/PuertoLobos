@@ -6,6 +6,7 @@ const https = require('https');
 const fs = require('fs');
 const FormData = require('form-data');
 const PImage = require('pureimage');
+const sanitizeHtml = require('sanitize-html');
 
 function getKeyResponse() {
 	 let conn;
@@ -398,6 +399,20 @@ function pullStuff(rockFact, target, targetpath) {
 	});
 }
 
+function formatDate (inputDate, format)  {
+	if (!inputDate) return '';
+
+	const padZero = (value) => (value < 10 ? `0${value}` : `${value}`);
+	const parts = {
+		yy: inputDate.getFullYear().toString().slice(-2),
+		MM: padZero(inputDate.getMonth() + 1),
+		dd: padZero(inputDate.getDate())
+	};
+
+	return format.replace(/yy|MM|dd/g, (match) => parts[match]);
+}
+
+
 function selectDate(num, mode) {
 	//Month is zero-indexed in JS!
 	var startDate = null;
@@ -426,7 +441,7 @@ function selectDate(num, mode) {
 		base_msec = startDate.getTime();
 		modifier = endDate - startDate;
 		random_msec = base_msec + (num % modifier);
-		finalDate =  new Date(random_msec).toISOString().slice(0,10);
+		finalDate =  formatDate(new Date(random_msec), 'yyMMdd');
 		break;
 		
 		case 'spirit':
@@ -765,8 +780,8 @@ function AdviceSlip() {
 
 function NasaAPOD(apodDate, num) {
 	const contentOptions = {
-			hostname: 'api.nasa.gov',
-			path: `/planetary/apod?date=${apodDate}&api_key=${myConsts.NASA}`,
+			hostname: 'science.nasa.gov',
+			path: `/wp-json/wp/v2/apod-basic/${apodDate}?api_key=${myConsts.NASA}`,
 			method: 'GET',
 			headers: {
 			  'Accept': 'application/json',
@@ -789,12 +804,16 @@ function NasaAPOD(apodDate, num) {
 			var parsedData = JSON.parse(rawData);
 			//console.log("My Content\r\n" + parsedData);
 			var myImage = new Object();
-			myImage.url = parsedData.url;
+			myImage.url = parsedData.hdurl;
 			var myProvider = new Object();
 			myProvider.name = 'NASA';
-			myProvider.url = 'https://api.nasa.gov/';
+			myProvider.url = 'https://science.nasa.gov';
 			var myAuthor = new Object();
-			myAuthor.name = parsedData.copyright;
+			const cleanCredit = sanitizeHtml(parsedData.credit, {
+				allowedTags: [],
+				allowedAttributes: {}
+			});
+			myAuthor.name = cleanCredit;
 			var myFooter = new Object();
 			myFooter.text = 'Posted: ' + parsedData.date;
 			var myEmbed = new Object();
@@ -803,7 +822,11 @@ function NasaAPOD(apodDate, num) {
 			myEmbed.provider = myProvider;
 			myEmbed.footer = myFooter;
 			myEmbed.title = parsedData.title;
-			myEmbed.description = parsedData.explanation;
+			const cleanDesc = sanitizeHtml(parsedData.explanation, {
+				allowedTags: [],
+				allowedAttributes: {}
+			});
+			myEmbed.description = cleanDesc;
 			//myEmbed.color = 52479;
 			myEmbed.color = num % 16777215; // Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
 			var myRoot = new Object();

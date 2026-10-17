@@ -16,6 +16,7 @@ const pool = mariadb.createPool({
 });
 const { randomUUID: uuidv4 } = require('crypto');
 const { evaluate } = require('./math.js');
+const sanitizeHtml = require('sanitize-html');
 
 const helpEmbed = new MessageEmbed()
 	.setColor('#0099ff')
@@ -36,7 +37,6 @@ const helpEmbed = new MessageEmbed()
 		{ name: "face", value: "Pulls a random face from 'This person does not exist'.", inline: true },
 		{ name: "guid, uuid", value: "DMs the sender a cryptographically secure type 4 UUID.", inline: true },
 		{ name: "guess m=<maximum guess> <your guess>", value: "Guess a positive integer between 0 and m!", inline: true },
-		{ name: "imgflip", value: "Generates a single-image meme via ImgFlip using completely random text.", inline: true },
 		{ name: "inspiro, insprio, inspirobot", value: "Pulls a random meme from InspiroBot!", inline: true },
 		{ name: "marco", value: 'Responds, "POLO!!"', inline: true },
 		{ name: "meme", value: "Generates a single-image meme via ImgFlip.\r\nArguments: p-t: p = panels; t = textboxes.\r\nUse the | character to separate text (max 5 boxes).", inline: true },
@@ -217,6 +217,19 @@ function Affirm() {
 	});
 }
 
+function formatDate (inputDate, format)  {
+	if (!inputDate) return '';
+
+	const padZero = (value) => (value < 10 ? `0${value}` : `${value}`);
+	const parts = {
+		yy: inputDate.getFullYear().toString().slice(-2),
+		MM: padZero(inputDate.getMonth() + 1),
+		dd: padZero(inputDate.getDate())
+	};
+
+	return format.replace(/yy|MM|dd/g, (match) => parts[match]);
+}
+
 function NasaAPOD(num) {
 	return new Promise(function(myResolve, myReject) {
 		var startDate = new Date(1995,5,17); //per NASA spec, must be after 1995-06-16, the first day APOD was posted
@@ -224,10 +237,10 @@ function NasaAPOD(num) {
 		var base_msec = startDate.getTime();
 		var modifier = endDate - startDate;
 		var random_msec = base_msec + (num % modifier);
-		var apodDate =  new Date(random_msec).toISOString().slice(0,10);
+		var apodDate =  formatDate(new Date(random_msec), 'yyMMdd');
 	const contentOptions = {
-			hostname: 'api.nasa.gov',
-			path: `/planetary/apod?date=${apodDate}&api_key=${myConsts.NASA}`,
+			hostname: 'science.nasa.gov',
+			path: `/wp-json/wp/v2/apod-basic/${apodDate}?api_key=${myConsts.NASA}`,
 			method: 'GET',
 			headers: {
 			  'Accept': 'application/json',
@@ -250,12 +263,16 @@ function NasaAPOD(num) {
 			var parsedData = JSON.parse(rawData);
 			//console.log("My Content\r\n" + parsedData);
 			var myImage = new Object();
-			myImage.url = parsedData.url;
+			myImage.url = parsedData.hdurl;
 			var myProvider = new Object();
 			myProvider.name = 'NASA';
-			myProvider.url = 'https://api.nasa.gov/';
+			myProvider.url = 'https://science.nasa.gov';
 			var myAuthor = new Object();
-			myAuthor.name = parsedData.copyright;
+			const cleanCredit = sanitizeHtml(parsedData.credit, {
+				allowedTags: [],
+				allowedAttributes: {}
+			});
+			myAuthor.name = cleanCredit;
 			var myFooter = new Object();
 			myFooter.text = 'Posted: ' + parsedData.date;
 			var myEmbed = new Object();
@@ -264,7 +281,11 @@ function NasaAPOD(num) {
 			myEmbed.provider = myProvider;
 			myEmbed.footer = myFooter;
 			myEmbed.title = parsedData.title;
-			myEmbed.description = parsedData.explanation;
+			const cleanDesc = sanitizeHtml(parsedData.explanation, {
+				allowedTags: [],
+				allowedAttributes: {}
+			});
+			myEmbed.description = cleanDesc;
 			//myEmbed.color = 52479;
 			myEmbed.color =  num % 16777215// Discord spec requires hexadecimal codes converted to a literal decimal value (anything random between black and white)
 			myResolve(myEmbed);
@@ -400,7 +421,7 @@ function EmojiPromise(emoji) {
 
 function BeastPromise() {		
 		return new Promise(function(myResolve, myReject) {
-			var beasts = ['🐈','🐕','🐉','🐑','🦀','🐳','🦘','🐟','🦒','🦑','🐄','🦉','🪿','🦄','🦬','🐷','🐭','🦔','🦡','🦤','🦞','🐢','🐺','🐇'];
+			var beasts = ['🐈','🐕','🐉','🐑','🦀','🐳','🦘','🐟','🦒','🦑','🐄','🦉','🪿','🦄','🦬','🐷','🐭','🦔','🦡','🦤','🦞','🐢','🐺','🐇','🐿️','🦨','🐌','🐘'];
 			try {
 				myConsts.getInt(0,beasts.length,2)
 				.then(
@@ -1179,19 +1200,6 @@ client.on("messageCreate", async function(message) {
 			 else {
 				message.channel.send("!guess m=<maximum guess> <your guess>");
 			 }
-			  break;
-			  
-			  case 'imgflip':
-			  CallImgFlip().then(
-				function(resp)
-				{
-					genImgFlip(resp).then(
-						function(resp2) { message.channel.send({embeds: [resp2]}); },
-						function(err) { message.channel.send(err); }
-					);
-					//console.log(resp);
-				}
-			  );
 			  break;
 			  
 			  case 'calc':
