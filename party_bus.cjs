@@ -1142,7 +1142,7 @@ client.on("messageCreate", async function(message) {
 			  await conn.release();
 		  }
 	  }
-	  else if (shopIndex >= 0)
+	  else if (shopIndex >= 0 && !message.content.startsWith("-#"))
 	  {
 		  var shopPrefix = shopprefixes[shopIndex];
 		  const command = message.content.indexOf(' ') >= 0 ? message.content.slice(shopPrefix.length, message.content.indexOf(' ')) : message.content.slice(shopPrefix.length);
@@ -1153,11 +1153,15 @@ client.on("messageCreate", async function(message) {
 			  //console.log("Hitting shop");
 			  //I believe because I wasn't defining this object and catching exceptions initially,
 			  //await was being disallowed because of unhandled rejections
-			  conn = await pool.getConnection();
-			  await conn.query("CALL useStore(?, @myPoints)", [message.content]);
-			  const rows = await conn.query("SELECT @myPoints AS myPoints");
-			  const theTotal = rows[0].myPoints;
-			  message.reply(`Nikko's points: ${theTotal}`);
+			  if (isNaN(command))
+			  {
+				conn = await pool.getConnection();
+				await conn.query("CALL useStore(?, @myPoints, @currShopper)", [message.content]);
+				const rows = await conn.query("SELECT @myPoints AS myPoints, @currShopper as currShopper");
+				const theTotal = rows[0].myPoints;
+				const theShopper= rows[0].currShopper;
+				message.reply(`${theShopper}'s points: ${theTotal}`);
+			  }
 		  }
 		  catch (err)
 		  {
