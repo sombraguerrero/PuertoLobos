@@ -1113,24 +1113,36 @@ client.on("messageCreate", async function(message) {
 	  }
 	  var shopIndex = validateShop(message.content[0]);
 	  //console.log(message.content);
-	  if (message.content.toLowerCase().endsWith("points"))
+	  rawArgs = message.content.split(' ');
+	  if (rawArgs.length >= 2 && rawArgs[1].toLowerCase() === "points")
 	  {
 		  try
 		  {
-			  //console.log("Hitting adjustment");
-			  args = message.content.split(' ');
-			  //console.log(args);
-			  if (args.length > 1 && !isNaN(args[0]))
+			  console.log("Hitting adjustment");
+			  console.log(rawArgs);
+			  if (rawArgs.length == 2 && !isNaN(rawArgs[0]))
 			  {
 				//I believe because I wasn't defining this object and catching exceptions initially,
 				//await was being disallowed because of unhandled rejections
 
 				conn = await pool.getConnection();
-				await conn.query("CALL adjustPoints(?, @myPoints)", [parseInt(args[0])]);
+				await conn.query("CALL adjustPoints(?, @myPoints, ?)", [parseInt(rawArgs[0]),'Nikko']);
 				const rows = await conn.query("SELECT @myPoints AS myPoints");
 				const theTotal = rows[0].myPoints;
 				message.reply(`Nikko's points: ${theTotal}`);
 			  }
+			  else if (rawArgs.length == 3 && !isNaN(rawArgs[0]))
+			  {
+				  //I believe because I wasn't defining this object and catching exceptions initially,
+				  //await was being disallowed because of unhandled rejections
+
+				  conn = await pool.getConnection();
+				  await conn.query("CALL adjustPoints(?, @myPoints, ?)", [parseInt(rawArgs[0]),rawArgs[2]]);
+				  const rows = await conn.query("SELECT @myPoints AS myPoints");
+				  const theTotal = rows[0].myPoints;
+				  message.reply(`${rawArgs[2]}'s points: ${theTotal}`);
+			  }
+
 		  }
 		  catch (err)
 		  {
@@ -1147,7 +1159,6 @@ client.on("messageCreate", async function(message) {
 		  var shopPrefix = shopprefixes[shopIndex];
 		  const command = message.content.indexOf(' ') >= 0 ? message.content.slice(shopPrefix.length, message.content.indexOf(' ')) : message.content.slice(shopPrefix.length);
 		  const baseArg = message.content.indexOf(' ') >= 0 ? message.content.slice(message.content.indexOf(' ') + 1) : null;
-		  var args;
 		  try
 		  {
 			  //console.log("Hitting shop");
